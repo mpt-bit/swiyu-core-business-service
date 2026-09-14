@@ -3,10 +3,16 @@ package ch.admin.bj.swiyu.core.business.modules.email.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.admin.bj.swiyu.core.business.modules.email.domain.Email;
+import ch.admin.bj.swiyu.core.business.modules.email.domain.HtmlToPlainTextConverter;
 import com.icegreen.greenmail.junit5.GreenMailExtension;
 import com.icegreen.greenmail.util.ServerSetupTest;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Part;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -19,12 +25,29 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
  * <p>This is the only place where the header encoding can be verified. The subjects carry "déposée"
  * and "Vérification"; they already survived Thymeleaf, Avro and Kafka in EID-6626 - SMTP, with its own
  * header encoding, is the last place where they can still break.
+ *
+ * <p>Since EID-6921 it is also the place where the MIME structure is verified. A multipart message
+ * that is nested wrongly does not fail to send: it arrives, and some clients show the markup as text
+ * while others show nothing. Only looking at what the server received catches that.
  */
 class EmailSendServiceTest {
 
     private static final String SUBJECT =
         "[TEST] Antrag eingereicht/ Application submitted/ Demande déposée/ Richiesta presentata";
-    private static final String BODY = "Guten Tag\n\nFreundliche Grüsse\n\nBonjour\n\nBuongiorno\n\nHello";
+    private static final String PLAIN_BODY = "Guten Tag\n\nFreundliche Grüsse\n\nBonjour\n\nBuongiorno\n\nHello";
+    private static final String HTML_BODY = """
+        <!DOCTYPE html>
+        <html lang="de">
+            <head><meta charset="utf-8" /><title>Betreff</title></head>
+            <body>
+                <section lang="de">
+                    <p>Guten Tag</p>
+                    <p>Freundliche Grüsse</p>
+                    <p><a href="https://www.swiyu.ch"><img src="cid:swiyu-logo-de" alt="swiyu" /></a></p>
+                </section>
+            </body>
+        </html>
+        """;
 
     @RegisterExtension
     static final GreenMailExtension GREEN_MAIL = new GreenMailExtension(ServerSetupTest.SMTP);
@@ -33,12 +56,12 @@ class EmailSendServiceTest {
         var sender = new JavaMailSenderImpl();
         sender.setHost("localhost");
         sender.setPort(port);
-        return new EmailSendService(sender);
+        return new EmailSendService(sender, new HtmlToPlainTextConverter());
     }
 
     @Test
     void deliversTheEmailToTheSmtpServer() throws Exception {
-        serviceSendingTo(GREEN_MAIL.getSmtp().getPort()).send(email());
+        send(email(HTML_BODY));
 
         assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
         var received = GREEN_MAIL.getReceivedMessages();
@@ -48,21 +71,17 @@ class EmailSendServiceTest {
 
     @Test
     void preservesUmlautsAndAccentsInSubjectAndBody() throws Exception {
-        serviceSendingTo(GREEN_MAIL.getSmtp().getPort()).send(email());
-
-        assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
-        var received = GREEN_MAIL.getReceivedMessages()[0];
+        var received = sendAndReceive(email(HTML_BODY));
 
         assertThat(received.getSubject()).contains("déposée");
-        assertThat(bodyOf(received)).contains("Grüsse");
+        assertThat(partsOf(received).stream().map(EmailSendServiceTest::textOf)).anyMatch(part ->
+            part.contains("Grüsse")
+        );
     }
 
     @Test
     void takesSenderReplyToAndRecipientFromThePayload() throws Exception {
-        serviceSendingTo(GREEN_MAIL.getSmtp().getPort()).send(email());
-
-        assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
-        var received = GREEN_MAIL.getReceivedMessages()[0];
+        var received = sendAndReceive(email(HTML_BODY));
 
         assertThat(received.getFrom()[0]).hasToString("registries@swiyu.admin.ch");
         assertThat(received.getReplyTo()[0]).hasToString("reply@swiyu.admin.ch");
@@ -70,18 +89,138 @@ class EmailSendServiceTest {
     }
 
     @Test
-    void sendsThePlainTextBodyWithoutHtml() throws Exception {
-        serviceSendingTo(GREEN_MAIL.getSmtp().getPort()).send(email());
+    void sendsAnHtmlBodyAsMultipartWithBothAlternatives() throws Exception {
+        var received = sendAndReceive(email(HTML_BODY));
 
+        var contentTypes = contentTypesOf(received);
+        assertThat(contentTypes).anyMatch(type -> type.startsWith("multipart/related"));
+        assertThat(contentTypes).anyMatch(type -> type.startsWith("multipart/alternative"));
+        assertThat(contentTypes).anyMatch(type -> type.startsWith("text/plain"));
+        assertThat(contentTypes).anyMatch(type -> type.startsWith("text/html"));
+    }
+
+    @Test
+    void derivesThePlainTextAlternativeFromTheHtml() throws Exception {
+        var received = sendAndReceive(email(HTML_BODY));
+
+        var plain = partOfType(received, "text/plain");
+        assertThat(plain).isEqualTo("Guten Tag\n\nFreundliche Grüsse");
+        // The logo is a link around an image and contributes nothing a text reader could use.
+        assertThat(plain).doesNotContain("cid:", "swiyu.ch");
+    }
+
+    @Test
+    void attachesOneInlineImagePerContentIdTheBodyReferences() throws Exception {
+        var received = sendAndReceive(email(HTML_BODY));
+
+        var images = imageParts(received);
+        assertThat(images).hasSize(1);
+        assertThat(images.getFirst().getHeader("Content-ID")[0]).contains("swiyu-logo-de");
+    }
+
+    @Test
+    void attachesNoImageForAContentIdThatNamesNoBundledFile() throws Exception {
+        var received = sendAndReceive(email(HTML_BODY.replace("cid:swiyu-logo-de", "cid:not-a-logo")));
+
+        // An email without its logo beats no email at all, so an unknown reference is logged and
+        // skipped rather than thrown.
+        assertThat(imageParts(received)).isEmpty();
+        assertThat(partOfType(received, "text/html")).contains("cid:not-a-logo");
+    }
+
+    @Test
+    void sendsANonHtmlBodyAsSinglePartPlainTextTheWayItAlwaysDid() throws Exception {
+        // The payload field is still called plainTextMessage. The sending side decides from the
+        // content, so a body that is not HTML - an older message on the topic, or a future publisher -
+        // goes out unchanged rather than as markup the recipient has to read by hand.
+        var received = sendAndReceive(email(PLAIN_BODY));
+
+        assertThat(received.getContentType()).startsWith("text/plain");
+        assertThat(textOf(received)).isEqualTo(PLAIN_BODY);
+    }
+
+    private void send(Email email) {
+        serviceSendingTo(GREEN_MAIL.getSmtp().getPort()).send(email);
+    }
+
+    private MimeMessage sendAndReceive(Email email) {
+        send(email);
         assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
-        assertThat(GREEN_MAIL.getReceivedMessages()[0].getContentType()).startsWith("text/plain");
+        return GREEN_MAIL.getReceivedMessages()[0];
     }
 
-    private static String bodyOf(MimeMessage message) throws Exception {
-        return message.getContent().toString();
+    private static List<String> contentTypesOf(MimeMessage message) {
+        var types = new ArrayList<String>();
+        collect(message, types, new ArrayList<>());
+        return types;
     }
 
-    private static Email email() {
+    private static List<Part> partsOf(MimeMessage message) {
+        var parts = new ArrayList<Part>();
+        collect(message, new ArrayList<>(), parts);
+        return parts;
+    }
+
+    /**
+     * Walks the whole MIME tree. The structure Spring builds for an inline image is nested three deep
+     * - mixed, related, alternative - and asserting on the flattened tree keeps the tests readable
+     * without tying them to that exact nesting.
+     */
+    private static void collect(Part part, List<String> types, List<Part> parts) {
+        try {
+            types.add(part.getContentType());
+            parts.add(part);
+            if (part.getContent() instanceof MimeMultipart multipart) {
+                for (var i = 0; i < multipart.getCount(); i++) {
+                    collect(multipart.getBodyPart(i), types, parts);
+                }
+            }
+        } catch (MessagingException | IOException e) {
+            throw new IllegalStateException("Could not walk the MIME structure", e);
+        }
+    }
+
+    private static List<Part> imageParts(MimeMessage message) {
+        return partsOf(message)
+            .stream()
+            .filter(part -> contentTypeOf(part).startsWith("image/"))
+            .toList();
+    }
+
+    private static String partOfType(MimeMessage message, String contentType) {
+        return partsOf(message)
+            .stream()
+            .filter(part -> contentTypeOf(part).startsWith(contentType))
+            .map(EmailSendServiceTest::textOf)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("No %s part in the message".formatted(contentType)));
+    }
+
+    private static String contentTypeOf(Part part) {
+        try {
+            return part.getContentType();
+        } catch (MessagingException e) {
+            throw new IllegalStateException("Could not read the content type", e);
+        }
+    }
+
+    /**
+     * SMTP rewrites every line ending to CRLF on the wire. That is the transport doing its job, not
+     * anything the sending service decided, so it is normalised away here rather than written into
+     * every expected value.
+     */
+    private static String textOf(Part part) {
+        try {
+            var content = part.getContent();
+            // A part whose content is not a String is an image or a nested multipart. That is not a
+            // failure, it simply has no text to contribute.
+            return content instanceof String text ? text.replace("\r\n", "\n").strip() : "";
+        } catch (MessagingException | IOException e) {
+            throw new IllegalStateException("Could not read the content of a MIME part", e);
+        }
+    }
+
+    private static Email email(String body) {
         return new Email(
             UUID.randomUUID(),
             "SUBMISSION_ACCEPTED",
@@ -90,7 +229,7 @@ class EmailSendServiceTest {
             "reply@swiyu.admin.ch",
             SUBJECT,
             Instant.now(),
-            BODY
+            body
         );
     }
 }

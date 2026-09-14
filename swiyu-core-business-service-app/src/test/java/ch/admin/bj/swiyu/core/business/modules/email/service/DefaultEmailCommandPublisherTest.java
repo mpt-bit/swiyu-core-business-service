@@ -187,7 +187,13 @@ class DefaultEmailCommandPublisherTest {
         publisher.submissionAccepted(PARTNER_ID);
 
         var body = capturePublishedCommand().getPayload().getPlainTextMessage();
-        assertThat(countOccurrences(body, PORTAL_URL)).isEqualTo(GREETINGS.size());
+        // Counted as hrefs and not as occurrences of the string: since EID-6921 the body is HTML and
+        // the URL appears twice per language, once in the href and once as the link text.
+        var hrefs = Pattern.compile("href\\s*=\\s*[\"']" + Pattern.quote(PORTAL_URL) + "[\"']")
+            .matcher(body)
+            .results()
+            .count();
+        assertThat(hrefs).isEqualTo(GREETINGS.size());
     }
 
     @Test
@@ -305,15 +311,5 @@ class DefaultEmailCommandPublisherTest {
     private static void assertNoUnresolvedVariables(EmailType emailType, String rendered) {
         var unresolved = UNRESOLVED.matcher(rendered).results().map(MatchResult::group).toList();
         assertThat(unresolved).as("unresolved template variables in email %s", emailType).isEmpty();
-    }
-
-    private static int countOccurrences(String haystack, String needle) {
-        var count = 0;
-        var index = haystack.indexOf(needle);
-        while (index >= 0) {
-            count++;
-            index = haystack.indexOf(needle, index + needle.length());
-        }
-        return count;
     }
 }

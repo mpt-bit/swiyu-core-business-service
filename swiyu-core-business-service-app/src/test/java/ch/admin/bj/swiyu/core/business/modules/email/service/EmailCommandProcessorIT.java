@@ -18,7 +18,12 @@ import ch.admin.bj.swiyu.messagetype.ti.TiSendEmailCommand;
 import ch.admin.bj.swiyu.messagetype.ti.TiSendEmailCommandPayload;
 import com.icegreen.greenmail.junit5.GreenMailExtension;
 import com.icegreen.greenmail.util.ServerSetupTest;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Part;
+import jakarta.mail.internet.MimeMultipart;
+import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +54,31 @@ class EmailCommandProcessorIT {
 
     @RegisterExtension
     static final GreenMailExtension GREEN_MAIL = new GreenMailExtension(ServerSetupTest.SMTP);
+
+    /**
+     * What the publisher puts on the topic since EID-6921: the rendered HTML document, in the field
+     * still called {@code plainTextMessage}.
+     */
+    private static final String HTML_BODY = """
+        <!DOCTYPE html>
+        <html lang="de">
+            <head><meta charset="utf-8" /><title>Betreff</title></head>
+            <body>
+                <section lang="de"><p>Guten Tag</p></section>
+                <hr />
+                <section lang="fr"><p>Bonjour</p></section>
+                <hr />
+                <section lang="it"><p>Buongiorno</p></section>
+                <hr />
+                <section lang="en"><p>Hello</p></section>
+            </body>
+        </html>
+        """;
+
+    /**
+     * A body that is not HTML, to cover the path the sending side falls back to.
+     */
+    private static final String PLAIN_BODY = "Guten Tag\n\nBonjour\n\nBuongiorno\n\nHello";
 
     /**
      * Spy, not mock: the other tests need the real send. Only the rollback test replaces the behaviour.
@@ -94,6 +124,40 @@ class EmailCommandProcessorIT {
         verifyAuditCommandWasSent((command.getPayload()).getPartnerId());
     }
 
+    @Test
+    void deliversAnHtmlBodyAsAMultipartMessageWithBothAlternatives() throws Exception {
+        processor.process(command(UUID.randomUUID().toString()));
+
+        assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
+        var received = GREEN_MAIL.getReceivedMessages()[0];
+
+        assertThat(received.getContentType()).startsWith("multipart/");
+        var types = contentTypesOf(received);
+        assertThat(types).anyMatch(type -> type.startsWith("text/plain"));
+        assertThat(types).anyMatch(type -> type.startsWith("text/html"));
+    }
+
+    @Test
+    void deliversABodyThatIsNotHtmlAsSinglePartPlainText() throws Exception {
+        // The field is still called plainTextMessage. Whatever else ends up on the topic - an older
+        // message, a future publisher - must still reach the partner as something readable.
+        processor.process(command(UUID.randomUUID().toString(), PLAIN_BODY));
+
+        assertThat(GREEN_MAIL.waitForIncomingEmail(5000, 1)).isTrue();
+        assertThat(GREEN_MAIL.getReceivedMessages()[0].getContentType()).startsWith("text/plain");
+    }
+
+    private static List<String> contentTypesOf(Part part) throws MessagingException, IOException {
+        var types = new ArrayList<String>();
+        types.add(part.getContentType());
+        if (part.getContent() instanceof MimeMultipart multipart) {
+            for (var i = 0; i < multipart.getCount(); i++) {
+                types.addAll(contentTypesOf(multipart.getBodyPart(i)));
+            }
+        }
+        return types;
+    }
+
     /**
      * The most important test of this story. If the record survived a failed send, it would block every
      * retry and the email would never go out at all.
@@ -120,6 +184,10 @@ class EmailCommandProcessorIT {
      * depending on the full Avro message envelope.
      */
     private static TiSendEmailCommand command(String idempotenceId) {
+        return command(idempotenceId, HTML_BODY);
+    }
+
+    private static TiSendEmailCommand command(String idempotenceId, String body) {
         var identity = mock(AvroMessageIdentity.class);
         when(identity.getIdempotenceId()).thenReturn(idempotenceId);
 
@@ -134,7 +202,7 @@ class EmailCommandProcessorIT {
             "registries@swiyu.admin.ch",
             "[TEST] Antrag eingereicht/ Application submitted/ Demande déposée/ Richiesta presentata",
             Instant.now(),
-            "Guten Tag\n\nBonjour\n\nBuongiorno\n\nHello"
+            body
         );
 
         var command = mock(TiSendEmailCommand.class);

@@ -29,7 +29,7 @@ public enum EmailType {
 
     /**
      * Name of the Thymeleaf template under {@code src/main/resources/email-templates}, without the
-     * {@code .txt} suffix.
+     * {@code .html} suffix.
      */
     private final String templateName;
 

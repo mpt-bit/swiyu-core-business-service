@@ -1,8 +1,8 @@
 package ch.admin.bj.swiyu.core.business.modules.email.domain;
 
+import static ch.admin.bj.swiyu.core.business.modules.email.domain.EmailTemplateFixture.variablesFor;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ch.admin.bj.swiyu.core.business.modules.email.config.MailConfig;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -20,35 +20,11 @@ import org.slf4j.LoggerFactory;
 class EmailContentRendererTest {
 
     /**
-     * The only two variables the reviewed templates use, per the feature specification.
+     * The two variables every template uses. The renewal reminder's third one is added by
+     * {@link EmailTemplateFixture#variablesFor}; the tests below that pin the subject line need no
+     * variables beyond these.
      */
-    private static final Map<String, Object> COMMON_VARIABLES = Map.of(
-        "contactEmail",
-        "registries@swiyu.admin.ch",
-        "servicePortalPartnerUrl",
-        "https://portal.trust-infra.swiyu.admin.ch/ui/business-partners/a-partner-id"
-    );
-
-    /**
-     * The repeated renewal reminder prints a plain number of days; the noun that follows it lives in
-     * the template, once per language section. It is the only template with a third variable: the
-     * initial reminder states its 180 day period in the reviewed text, and the delayed review notice
-     * names no period at all.
-     */
-    private static final Map<String, Object> EXPIRATION_VARIABLES = Map.of("expirationDurationDays", 90);
-
-    /**
-     * Every variable a template of that type is allowed to declare. Deliberately per type rather than
-     * one set for all: a template that references a variable nobody supplies renders a gap, and this
-     * is the test that catches it.
-     */
-    private static Map<String, Object> variablesFor(EmailType emailType) {
-        var variables = new HashMap<>(COMMON_VARIABLES);
-        if (emailType == EmailType.TRUST_RENEWAL_REMINDER) {
-            variables.putAll(EXPIRATION_VARIABLES);
-        }
-        return variables;
-    }
+    private static final Map<String, Object> COMMON_VARIABLES = variablesFor(EmailType.SUBMISSION_ACCEPTED);
 
     private EmailContentRenderer renderer;
     private ListAppender<ILoggingEvent> logAppender;
@@ -56,7 +32,7 @@ class EmailContentRendererTest {
 
     @BeforeEach
     void setUp() {
-        renderer = new EmailContentRenderer(new MailConfig().emailTemplateEngine());
+        renderer = EmailTemplateFixture.renderer();
         logAppender = new ListAppender<>();
         logAppender.start();
         logger = (Logger) LoggerFactory.getLogger(EmailContentRenderer.class);
@@ -74,7 +50,7 @@ class EmailContentRendererTest {
         var email = renderer.render(emailType, variablesFor(emailType), "");
 
         assertThat(email.subject()).isNotBlank();
-        assertThat(email.plainTextMessage()).isNotBlank();
+        assertThat(email.body()).isNotBlank();
         assertThat(errorMessages()).isEmpty();
     }
 
@@ -92,7 +68,7 @@ class EmailContentRendererTest {
         var email = renderer.render(emailType, variablesFor(emailType), "");
 
         // Body order per the feature specification: DE, FR, IT, EN
-        assertThat(email.plainTextMessage()).containsSubsequence("Guten Tag", "Bonjour", "Buongiorno", "Hello");
+        assertThat(email.body()).containsSubsequence("Guten Tag", "Bonjour", "Buongiorno", "Hello");
     }
 
     @Test
@@ -121,10 +97,37 @@ class EmailContentRendererTest {
     }
 
     @Test
-    void stripsTheFrontMatterFromTheBody() {
+    void rendersTheBodyAsAnHtmlDocument() {
         var email = renderer.render(EmailType.SUBMISSION_ACCEPTED, COMMON_VARIABLES, "");
 
-        assertThat(email.plainTextMessage()).doesNotContain("subject:").startsWith("Guten Tag");
+        // Stripped: the template file ends with a newline and Thymeleaf carries it through, which
+        // says nothing about the document being complete.
+        assertThat(email.body().strip())
+            .startsWith("<!DOCTYPE html>")
+            .contains("<section lang=\"de\">")
+            .endsWith("</html>");
+    }
+
+    @Test
+    void pullsInTheSignatureFragmentInEveryLanguage() {
+        var email = renderer.render(EmailType.SUBMISSION_ACCEPTED, COMMON_VARIABLES, "");
+
+        // A th:replace that failed to resolve leaves the placeholder div behind rather than failing,
+        // so the closings are what proves the four fragments were actually pulled in.
+        assertThat(email.body()).contains("Freundliche Grüsse", "Cordialement", "Cordiali saluti", "Kind regards");
+        assertThat(email.body()).doesNotContain("th:replace");
+    }
+
+    @Test
+    void escapesResolvedVariablesInsteadOfInjectingThemAsMarkup() {
+        var variables = new HashMap<>(COMMON_VARIABLES);
+        variables.put("contactEmail", "<script>alert(1)</script>@example.com");
+
+        var email = renderer.render(EmailType.SUBMISSION_ACCEPTED, variables, "");
+
+        // The templates use th:text and [[${...}]], never the unescaped [(${...})] form. A value from
+        // configuration is unlikely to be hostile, but the escaping rule must not depend on that.
+        assertThat(email.body()).doesNotContain("<script>").contains("&lt;script&gt;");
     }
 
     @Test

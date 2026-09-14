@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>AHV Verifikation/ OASI verification/ Vérification AVS/ Verifica AVS</title>
+        <style th:replace="~{fragments/styles :: email-styles}"></style>
+    </head>
+    <body>
+        <section lang="de">
+            <p>Guten Tag</p>
+            <p>Die eingereichten Informationen zur Zulassung als AHV-Prüfer erfüllen die Anforderungen nicht. Ihr Antrag wurde daher abgelehnt.</p>
+            <p>Bei Fragen stehen wir Ihnen unter <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a> zur Verfügung.</p>
+            <p>Link zu Ihrem Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-de}"></div>
+        </section>
+        <hr />
+        <section lang="fr">
+            <p>Bonjour</p>
+            <p>Les informations fournies en vue de l'habilitation comme vérificateur AVS ne répondent pas aux exigences. Votre demande a donc été rejetée.</p>
+            <p>Pour toute question, nous restons à votre disposition à l'adresse <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Lien vers votre business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-fr}"></div>
+        </section>
+        <hr />
+        <section lang="it">
+            <p>Buongiorno</p>
+            <p>Le informazioni fornite per l'abilitazione come verificatore AVS non soddisfano i requisiti. Pertanto, la sua richiesta è stata respinta.</p>
+            <p>Per eventuali domande, restiamo a disposizione all'indirizzo <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link al Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-it}"></div>
+        </section>
+        <hr />
+        <section lang="en">
+            <p>Hello</p>
+            <p>The information you have submitted regarding your application to verify the OASI number does not meet the requirements. Your application has therefore been rejected.</p>
+            <p>If you have any questions, please contact us at <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link to your business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-en}"></div>
+        </section>
+    </body>
+</html>

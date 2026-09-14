@@ -11,18 +11,22 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 public class MailConfig {
 
     public static final String TEMPLATE_PREFIX = "email-templates/";
-    public static final String TEMPLATE_SUFFIX = ".txt";
+    public static final String TEMPLATE_SUFFIX = ".html";
 
     /**
-     * Template engine for the partner notification emails. These are plain text only, hence
-     * {@link TemplateMode#TEXT} - no HTML escaping is applied to the resolved variables.
+     * Template engine for the partner notification emails.
+     *
+     * <p>{@link TemplateMode#HTML} since EID-6921: the templates are HTML documents, and the plain
+     * text alternative part of the multipart message is derived from the rendered HTML rather than
+     * authored separately. HTML mode escapes every resolved variable, which is why the templates use
+     * {@code [[${...}]]} and {@code th:text} and never the unescaped {@code [(${...})]} form.
      */
     @Bean
     public TemplateEngine emailTemplateEngine() {
         var resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix(TEMPLATE_PREFIX);
         resolver.setSuffix(TEMPLATE_SUFFIX);
-        resolver.setTemplateMode(TemplateMode.TEXT);
+        resolver.setTemplateMode(TemplateMode.HTML);
         resolver.setCharacterEncoding(StandardCharsets.UTF_8.name());
         resolver.setCacheable(true);
 

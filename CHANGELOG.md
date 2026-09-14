@@ -5,13 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.43.3
+
+### Fixed
+
+- Raise embedded Tomcat to 11.0.25, fixing three critical authentication and authorisation bypasses (CVE-2026-65182, CVE-2026-65905, CVE-2026-68525)
+
+## 3.43.2
+
+### Fixed
+
+- Fix Sonar findings in `HtmlToPlainTextConverter`:
+  - split the non-text element regex into three simple patterns, bringing its complexity under the allowed limit
+  - escape the non-breaking space in the entity table, which was an invisible literal
+  - reduce the reader loop to a single exit
+  - move `tagName`, `href`, `normalise` and `wrap` into `Reader`, which is their only caller
+  - replace the chained link condition with a named predicate, and the group fallbacks with
+    `Objects.requireNonNullElse`
+  - drop `flushListItem`, which did the same as `flushBlock` inside a list
+
+### Changed
+
+- The local SMTP sink is Mailpit instead of MailHog, on the same ports. The system tests read the mailbox through
+  its API, and the stage they run against uses the same image - MailHog's API is not compatible with it
+
+## 3.43.1
+
+### Added
+
+- `HtmlToPlainTextConverter`, which derives the text/plain part of the multipart message from the rendered HTML
+- `DevHtmlEmailPreviewTest`, which writes a browser preview of all 15 emails to target/email-preview
+
+### Changed
+
+- Partner notification emails are sent as HTML multipart (text/plain and text/html) with hyperlinks, the swiyu logo
+  as an inline image and accessible, W3C-conformant markup
+- The email code reads the rendered documents without a third-party HTML parser: the subject comes out of `<title>`,
+  the inline images out of the `cid:` references, and the text/plain part out of a single pass over the body
+- The 15 email templates are HTML documents; the subject comes from `<title>` and the language sections from
+  `<section lang="...">`
+- Renamed `Email.plainTextMessage` to `Email.body`
+- Added CVE override for com.github.luben:zstd-jni 1.5.7-14. It arrives transitively through kafka-clients; 1.5.6-10
+  carries five high severity issues
+
+### Removed
+
+- The 15 plain-text email templates. The HTML templates replace them, and the `text/plain` part of the message is
+  derived from the rendered HTML when sending
+
 ## 3.43.0
 
 ### Changed
 
 - Allow partial profile edit for non-relevant information on the profile page to align with ui functionality
 - Fix demo data to be consistent with flow capabilities
-
 
 ## 3.42.36
 

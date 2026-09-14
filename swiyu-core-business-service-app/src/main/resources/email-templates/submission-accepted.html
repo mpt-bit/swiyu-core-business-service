@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Antrag eingereicht/ Application submitted/ Demande déposée/ Richiesta presentata</title>
+        <style th:replace="~{fragments/styles :: email-styles}"></style>
+    </head>
+    <body>
+        <section lang="de">
+            <p>Guten Tag</p>
+            <p>Wir haben Ihren Antrag erhalten. Sie werden benachrichtigt wenn sich der Status Ihres Antrags ändert.</p>
+            <p>Für Fragen stehen wir Ihnen unter <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a> zur Verfügung.</p>
+            <p>Link zu Ihrem Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-de}"></div>
+        </section>
+        <hr />
+        <section lang="fr">
+            <p>Bonjour</p>
+            <p>Nous avons bien reçu votre demande. Vous serez informé dès que le statut de votre demande changera.</p>
+            <p>Pour toute question, nous restons à votre disposition à l'adresse <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Lien vers votre business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-fr}"></div>
+        </section>
+        <hr />
+        <section lang="it">
+            <p>Buongiorno</p>
+            <p>Abbiamo ricevuto la sua richiesta. Non appena lo stato della richiesta subirà modifiche, riceverà una notifica.</p>
+            <p>Per eventuali domande, restiamo a disposizione all'indirizzo <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link al Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-it}"></div>
+        </section>
+        <hr />
+        <section lang="en">
+            <p>Hello</p>
+            <p>We have received your application. You will be notified when the status of your application changes.</p>
+            <p>If you have any questions, please contact us at <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link to your business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-en}"></div>
+        </section>
+    </body>
+</html>

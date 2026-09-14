@@ -227,7 +227,9 @@ public class DefaultEmailCommandPublisher implements EmailCommandPublisher {
             .replyTo(mailProperties.getReplyTo())
             .subject(email.subject())
             .sentAt(Instant.now())
-            .plainTextMessage(email.plainTextMessage())
+            // The payload field is named for what it used to carry; since EID-6921 it is the
+            // rendered HTML document, and the sending side derives the plain text part from it.
+            .plainTextMessage(email.body())
             .build();
 
         var topic = TiSendEmailCommand.TypeRef.DEFAULT_TOPIC;

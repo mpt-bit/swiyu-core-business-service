@@ -1,10 +1,14 @@
 services:
   # Local SMTP sink for the partner notification emails (EID-6627).
-  # MailHog accepts anything without authentication and shows the received mails at
+  # Mailpit accepts anything without authentication and shows the received mails at
   # http://localhost:8025 - nothing ever leaves the machine.
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: mailhog
+  #
+  # The same image runs as swiyu-mail-server on DEV, where the system tests read the mailbox
+  # through its API. Keeping both ends on Mailpit means a green local run exercises the same
+  # code path as the one on DEV; MailHog, which this replaces, has an incompatible API.
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    container_name: mailpit
     ports:
       - "1025:1025" # SMTP
-      - "8025:8025" # web UI
+      - "8025:8025" # web UI and API

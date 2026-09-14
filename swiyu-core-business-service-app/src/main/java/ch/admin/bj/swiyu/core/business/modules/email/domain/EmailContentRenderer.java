@@ -6,10 +6,11 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,28 +20,25 @@ import org.thymeleaf.context.Context;
 /**
  * Renders an {@link EmailType} template into a complete {@link RenderedEmail}.
  *
- * <p>A template consists of a front-matter block delimited by lines containing only {@code ---},
- * holding the subject in all four languages separated by "/", followed by the body with the
- * DE / FR / IT / EN sections:
+ * <p>A template is an HTML document with one {@code <section lang="...">} per language, in the order
+ * DE / FR / IT / EN, and the subject - all four languages separated by "/" - in its {@code <title>}.
+ * The stylesheet and the closing signature come from the fragments under
+ * {@code email-templates/fragments}.
  *
- * <pre>
- * ---
- * subject: Antrag eingereicht/ Application submitted/ Demande deposee/ Richiesta presentata
- * ---
- * Guten Tag
- * ...
- * </pre>
- *
- * <p>The whole file - front matter included - is passed through Thymeleaf, so the subject may
- * contain variables too. The stage prefix (e.g. "[DEV]") is prepended to the rendered subject.
+ * <p>The subject is read back out of the rendered document rather than from a separate front matter
+ * block, so it goes through Thymeleaf like everything else and may contain variables. The stage
+ * prefix (e.g. "[DEV]") is prepended to it.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class EmailContentRenderer {
 
-    private static final String FRONT_MATTER_DELIMITER = "---";
-    private static final String SUBJECT_KEY = "subject";
+    /**
+     * The signature fragment is pulled into every template, so the variables it declares are
+     * variables every template needs.
+     */
+    private static final String SIGNATURE_FRAGMENT = "fragments/signature";
 
     /**
      * Matches a variable reference in the raw template source, used to verify up front that the
@@ -57,6 +55,9 @@ public class EmailContentRenderer {
         "\\$\\{[^}]*}|\\[\\[[^\\]]*]]|\\[\\([^)]*\\)]"
     );
 
+    /** The document title, which is where the subject comes from. */
+    private static final Pattern TITLE = Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>");
+
     private final TemplateEngine emailTemplateEngine;
 
     public RenderedEmail render(EmailType emailType, Map<String, Object> variables, String subjectPrefix) {
@@ -64,10 +65,9 @@ public class EmailContentRenderer {
 
         var context = new Context();
         variables.forEach(context::setVariable);
-        var rendered = emailTemplateEngine.process(emailType.getTemplateName(), context);
+        var body = emailTemplateEngine.process(emailType.getTemplateName(), context);
 
-        var subject = withPrefix(subjectPrefix, parseSubject(emailType, rendered));
-        var body = stripFrontMatter(rendered).strip();
+        var subject = withPrefix(subjectPrefix, parseSubject(emailType, body));
 
         logUnresolvedExpressions(emailType, subject);
         logUnresolvedExpressions(emailType, body);
@@ -81,12 +81,10 @@ public class EmailContentRenderer {
      * it as an empty string, which would otherwise leave a silent gap in the email.
      */
     private void logMissingVariables(EmailType emailType, Map<String, Object> variables) {
-        var missing = new LinkedHashSet<String>();
-        TEMPLATE_VARIABLE.matcher(readTemplateSource(emailType))
-            .results()
-            .map(match -> match.group(1))
+        var missing = declaredVariables(emailType)
+            .stream()
             .filter(name -> variables.get(name) == null)
-            .forEach(missing::add);
+            .collect(Collectors.toCollection(LinkedHashSet::new));
         if (!missing.isEmpty()) {
             log.error(
                 "Email template '{}' references variables that were not supplied or are null: {}. " +
@@ -97,11 +95,8 @@ public class EmailContentRenderer {
         }
     }
 
-    private void logUnresolvedExpressions(EmailType emailType, String rendered) {
-        var unresolved = UNRESOLVED_EXPRESSION.matcher(rendered)
-            .results()
-            .map(java.util.regex.MatchResult::group)
-            .toList();
+    private static void logUnresolvedExpressions(EmailType emailType, String rendered) {
+        var unresolved = UNRESOLVED_EXPRESSION.matcher(rendered).results().map(MatchResult::group).toList();
         if (!unresolved.isEmpty()) {
             log.error(
                 "Email template '{}' produced unresolved template expressions: {}",
@@ -111,22 +106,22 @@ public class EmailContentRenderer {
         }
     }
 
-    private String parseSubject(EmailType emailType, String rendered) {
-        for (var line : frontMatterLines(rendered)) {
-            var separator = line.indexOf(':');
-            if (separator > 0 && SUBJECT_KEY.equals(line.substring(0, separator).strip())) {
-                var subject = line.substring(separator + 1).strip();
-                if (!subject.isEmpty()) {
-                    return subject;
-                }
-            }
+    /**
+     * The subject is the document title.
+     *
+     * <p>The title carries accented text in four languages, so the character references Thymeleaf
+     * emits have to be resolved the way the receiving mail client would - hence the decoding step
+     * rather than taking the raw match.
+     */
+    private static String parseSubject(EmailType emailType, String rendered) {
+        var match = TITLE.matcher(rendered);
+        var title = match.find() ? HtmlToPlainTextConverter.decodeEntities(match.group(1)).strip() : "";
+        if (title.isEmpty()) {
+            throw new IllegalStateException(
+                "Email template '%s' has no <title> to take the subject from".formatted(emailType.getTemplateName())
+            );
         }
-        throw new IllegalStateException(
-            "Email template '%s' has no '%s' entry in its front matter".formatted(
-                emailType.getTemplateName(),
-                SUBJECT_KEY
-            )
-        );
+        return title;
     }
 
     /**
@@ -139,35 +134,8 @@ public class EmailContentRenderer {
         return subjectPrefix.endsWith(" ") ? subjectPrefix + subject : subjectPrefix + " " + subject;
     }
 
-    private List<String> frontMatterLines(String rendered) {
-        var lines = rendered.strip().lines().toList();
-        if (lines.isEmpty() || !FRONT_MATTER_DELIMITER.equals(lines.getFirst().strip())) {
-            return List.of();
-        }
-        var end = indexOfClosingDelimiter(lines);
-        return end < 0 ? List.of() : lines.subList(1, end);
-    }
-
-    private String stripFrontMatter(String rendered) {
-        var lines = rendered.strip().lines().toList();
-        if (lines.isEmpty() || !FRONT_MATTER_DELIMITER.equals(lines.getFirst().strip())) {
-            return rendered;
-        }
-        var end = indexOfClosingDelimiter(lines);
-        return end < 0 ? rendered : String.join("\n", lines.subList(end + 1, lines.size()));
-    }
-
-    private int indexOfClosingDelimiter(List<String> lines) {
-        for (var i = 1; i < lines.size(); i++) {
-            if (FRONT_MATTER_DELIMITER.equals(lines.get(i).strip())) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private String readTemplateSource(EmailType emailType) {
-        var path = MailConfig.TEMPLATE_PREFIX + emailType.getTemplateName() + MailConfig.TEMPLATE_SUFFIX;
+    private String readSource(String templateName) {
+        var path = MailConfig.TEMPLATE_PREFIX + templateName + MailConfig.TEMPLATE_SUFFIX;
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(path)) {
             if (in == null) {
                 throw new IllegalStateException("Email template '%s' not found on the classpath".formatted(path));
@@ -179,12 +147,14 @@ public class EmailContentRenderer {
     }
 
     /**
-     * Exposed so callers can assert on the exact set of variables a template needs.
+     * Exposed so callers can assert on the exact set of variables a template needs. Includes the
+     * signature fragment, which every template pulls in and which declares {@code contactEmail}.
      */
     public Set<String> declaredVariables(EmailType emailType) {
-        return TEMPLATE_VARIABLE.matcher(readTemplateSource(emailType))
+        var source = readSource(emailType.getTemplateName()) + readSource(SIGNATURE_FRAGMENT);
+        return TEMPLATE_VARIABLE.matcher(source)
             .results()
             .map(match -> match.group(1))
-            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

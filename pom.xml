@@ -5,7 +5,7 @@
 
     <groupId>ch.admin.bj.swiyu</groupId>
     <artifactId>swiyu-core-business-service</artifactId>
-    <version>3.43.0-SNAPSHOT</version>
+    <version>3.43.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>ch.admin.bit.jeap</groupId>
@@ -29,6 +29,21 @@
         <prettier.version>3.8.1</prettier.version>
         <prettier-plugin-java.version>2.8.1</prettier-plugin-java.version>
         <sonar.scm.disabled>true</sonar.scm.disabled>
+        <!-- CVE-OVERRIDE start -->
+        <!-- The embedded Tomcat that the Spring Boot parent pins, 11.0.23, carries three critical
+             issues, all of them authentication or authorisation bypasses: CVE-2026-65182 (security
+             constraint bypass), CVE-2026-65905 (replay against the DIGEST authenticator) and
+             CVE-2026-68525 (FORM authentication bypass). 11.0.25 is the first release with all three
+             fixed.
+
+             Set as a property rather than a dependencyManagement entry on tomcat-embed-core: the
+             starter also brings tomcat-embed-el and tomcat-embed-websocket, and the property is what
+             the Spring Boot BOM reads for all three. Pinning only the one Trivy names would leave the
+             other two behind and mix versions inside one Tomcat.
+
+             Remove once the jeap parent brings a Spring Boot that pins 11.0.25 or later. -->
+        <tomcat.version>11.0.25</tomcat.version>
+        <!-- CVE-OVERRIDE end -->
     </properties>
 
 
@@ -60,6 +75,16 @@
                 <version>${project.version}</version>
             </dependency>
             <!-- CVE-OVERRIDE start -->
+            <!-- zstd-jni arrives transitively through kafka-clients, both at runtime via the
+                 messaging starter and in the test scope via jeap-messaging-infrastructure-kafka-test.
+                 1.5.6-10 carries five high severity issues (out-of-bounds read, integer overflow, use
+                 after free); 1.5.7-14 is the first version with all of them fixed. Remove once the
+                 jeap parent brings a kafka-clients that resolves it on its own. -->
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>1.5.7-14</version>
+            </dependency>
             <!-- CVE-OVERRIDE end -->
 
             <!-- commons-io is explicitly managed here because it is not provided by Spring Boot or jeap-parent.

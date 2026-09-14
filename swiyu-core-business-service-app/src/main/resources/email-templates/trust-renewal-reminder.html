@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Datenaktualisierung/ Data update/ Mise à jour des données/ Aggiornamento dei dati</title>
+        <style th:replace="~{fragments/styles :: email-styles}"></style>
+    </head>
+    <body>
+        <section lang="de">
+            <p>Guten Tag</p>
+            <p>Gerne erinnern wir Sie daran, dass die Prüfung Ihrer Angaben im swiyu Vertrauensregister noch offen ist. Bitte bestätigen Sie uns deren Aktualität oder aktualisieren Sie die Angaben bei Bedarf. Ihnen stehen noch [[${expirationDurationDays}]] Tage zur Verfügung.</p>
+            <p>Hinweis:</p>
+            <ul>
+                <li>Erhalten wir innert obengenannter Frist keine Rückmeldung, wird Ihr Eintrag im swiyu Vertrauensregister gelöscht. Sie gelten dann nicht mehr als verifizierte Aussteller oder Prüfer. Ihre Daten im swiyu Basisregister (insbesondere Identifikatoren) bleiben jedoch bestehen.</li>
+                <li>Jede Änderung Ihrer Angaben hat eine erneute Kontrolle durch das Bundesamt für Justiz zur Folge. Dafür wird eine Gebühr von CHF 350.– erhoben.</li>
+            </ul>
+            <p>Für Fragen stehen wir Ihnen unter <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a> zur Verfügung.</p>
+            <p>Link zu Ihrem Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-de}"></div>
+        </section>
+        <hr />
+        <section lang="fr">
+            <p>Bonjour</p>
+            <p>Nous tenons à vous rappeler que la vérification de vos informations dans le registre de confiance swiyu est toujours en cours. Veuillez nous confirmer qu'elles sont à jour ou les mettre à jour si nécessaire. Il vous reste encore [[${expirationDurationDays}]] jours.</p>
+            <p>Remarque :</p>
+            <ul>
+                <li>Si nous ne recevons aucune réponse dans le délai susmentionné, votre inscription au registre de confiance swiyu sera supprimée. Vous ne serez alors plus considéré comme émetteur ou vérificateur certifié. Vos données figurant dans le registre de base swiyu (en particulier vos identifiants) resteront toutefois inchangées.</li>
+                <li>Toute modification de vos données entraîne un nouveau contrôle par l'Office fédéral de la justice. Des frais de CHF 350.– sont prélevés à cet effet.</li>
+            </ul>
+            <p>Pour toute question, nous restons à votre disposition à l'adresse <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Lien vers votre business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-fr}"></div>
+        </section>
+        <hr />
+        <section lang="it">
+            <p>Buongiorno</p>
+            <p>Le ricordiamo che la verifica dei suoi dati nel registro di fiducia è ancora in sospeso. La preghiamo di confermarci che tali dati siano aggiornati o, se necessario, di aggiornarli. Ha ancora [[${expirationDurationDays}]] giorni a disposizione.</p>
+            <p>Nota:</p>
+            <ul>
+                <li>Se non riceveremo alcuna risposta entro il termine sopra indicato, la sua iscrizione nel registro di fiducia swiyu verrà cancellata. In tal caso, non sarà più considerato come emittente o verificatore verificato. I suoi dati nel registro di base swiyu (in particolare gli identificatori) rimarranno tuttavia invariati.</li>
+                <li>Ogni modifica dei suoi dati comporta un nuovo controllo da parte dell'Ufficio federale di giustizia. A tal fine viene applicata una tassa di CHF 350.–.</li>
+            </ul>
+            <p>Per eventuali domande, restiamo a disposizione all'indirizzo <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link al Business Partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-it}"></div>
+        </section>
+        <hr />
+        <section lang="en">
+            <p>Hello</p>
+            <p>We would like to remind you that the verification of your details in the swiyu Trust Registry is still pending. Please confirm that your details are accurate or update them if necessary. You still have [[${expirationDurationDays}]] days to complete your review.</p>
+            <p>Please note:</p>
+            <ul>
+                <li>If we do not receive a response within the above-mentioned period, your entry in the swiyu Trust Registry will be deleted. You will then no longer be considered a verified issuer or verifier. However, your data in the swiyu Base Registry (in particular your identifiers) will remain.</li>
+                <li>Any change to your details will result in a new verification process by the Federal Office of Justice. A fee of CHF 350.– will be charged for this.</li>
+            </ul>
+            <p>If you have any questions, please contact us at <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a>.</p>
+            <p>Link to your business partner: <a th:href="${servicePortalPartnerUrl}" th:text="${servicePortalPartnerUrl}">link</a></p>
+            <div th:replace="~{fragments/signature :: signature-en}"></div>
+        </section>
+    </body>
+</html>

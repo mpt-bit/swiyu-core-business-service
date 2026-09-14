@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <div class="signature" th:fragment="signature-de">
+            <p>Freundliche Grüsse</p>
+            <p>Bundesamt für Justiz</p>
+            <p>Fachbereich e-ID</p>
+            <p>Bundesrain 20, 3003 Bern</p>
+            <p><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a></p>
+            <p><a href="https://www.swiyu.admin.ch">https://www.swiyu.admin.ch</a></p>
+            <p class="signature-logo">
+                <a href="https://www.swiyu.ch"
+                    ><img
+                        src="cid:swiyu-logo-de"
+                        width="340"
+                        height="44"
+                        alt="swiyu – Ein Dienst der Schweizerischen Eidgenossenschaft"
+                /></a>
+            </p>
+        </div>
+
+        <div class="signature" th:fragment="signature-fr">
+            <p>Cordialement</p>
+            <p>Office fédéral de la justice</p>
+            <p>Division e-ID</p>
+            <p>Bundesrain 20, 3003 Berne</p>
+            <p><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a></p>
+            <p><a href="https://www.swiyu.admin.ch">https://www.swiyu.admin.ch</a></p>
+            <p class="signature-logo">
+                <a href="https://www.swiyu.ch"
+                    ><img
+                        src="cid:swiyu-logo-fr"
+                        width="288"
+                        height="44"
+                        alt="swiyu – Un service de la Confédération suisse"
+                /></a>
+            </p>
+        </div>
+
+        <div class="signature" th:fragment="signature-it">
+            <p>Cordiali saluti</p>
+            <p>Ufficio federale di giustizia</p>
+            <p>Sezione e-ID</p>
+            <p>Bundesrain 20, 3003 Berna</p>
+            <p><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a></p>
+            <p><a href="https://www.swiyu.admin.ch">https://www.swiyu.admin.ch</a></p>
+            <p class="signature-logo">
+                <a href="https://www.swiyu.ch"
+                    ><img
+                        src="cid:swiyu-logo-it"
+                        width="304"
+                        height="44"
+                        alt="swiyu – Un servizio della Confederazione Svizzera"
+                /></a>
+            </p>
+        </div>
+
+        <div class="signature" th:fragment="signature-en">
+            <p>Kind regards</p>
+            <p>Federal Office of Justice</p>
+            <p>e-ID Division</p>
+            <p>Bundesrain 20, 3003 Bern</p>
+            <p><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact</a></p>
+            <p><a href="https://www.swiyu.admin.ch">https://www.swiyu.admin.ch</a></p>
+            <p class="signature-logo">
+                <a href="https://www.swiyu.ch"
+                    ><img
+                        src="cid:swiyu-logo-en"
+                        width="285"
+                        height="44"
+                        alt="swiyu – A service of the Swiss Confederation"
+                /></a>
+            </p>
+        </div>
+    </body>
+</html>

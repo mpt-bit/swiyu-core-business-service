@@ -60,6 +60,11 @@ public class SentNotification {
     /**
      * The email as it was sent. Everything else about the notification - type, recipients, subject,
      * body - is in here.
+     *
+     * <p>The JSON is the shape of the {@link Email} record. Rows written before the body field was
+     * renamed carry it under {@code plainTextMessage}, newer ones under {@code body}; a query over
+     * the whole history has to read both. Nothing in the service reads this column back, so the two
+     * shapes were left as they are rather than rewritten by a migration.
      */
     @NotNull
     @Column(columnDefinition = "jsonb")
