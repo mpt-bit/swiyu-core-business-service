@@ -269,7 +269,7 @@ class StatusListEntryServiceIT {
 
         // WHEN / THEN no error
         Assertions.assertDoesNotThrow(() ->
-            statusListValidator.validateStatusListVcV2(entry, VALID_SWISS_PROFILE_STATUS_LIST_VC)
+            statusListValidator.validateStatusListVcV2(entry, VALID_SWISS_PROFILE_STATUS_LIST_VC, null)
         );
     }
 }

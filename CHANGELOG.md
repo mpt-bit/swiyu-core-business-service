@@ -5,24 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.44.0
+
+### Added
+
+- Added validation to status list upload (v2) that a status list must be newer than the one already uploaded (iat
+  compare)
+- Update jeap-spring-boot-parent -> 41.3.0
+
 ## 3.43.3
 
 ### Fixed
 
-- Raise embedded Tomcat to 11.0.25, fixing three critical authentication and authorisation bypasses (CVE-2026-65182, CVE-2026-65905, CVE-2026-68525)
+- Raise embedded Tomcat to 11.0.25, fixing three critical authentication and authorisation bypasses (CVE-2026-65182,
+  CVE-2026-65905, CVE-2026-68525)
 
 ## 3.43.2
 
 ### Fixed
 
 - Fix Sonar findings in `HtmlToPlainTextConverter`:
-  - split the non-text element regex into three simple patterns, bringing its complexity under the allowed limit
-  - escape the non-breaking space in the entity table, which was an invisible literal
-  - reduce the reader loop to a single exit
-  - move `tagName`, `href`, `normalise` and `wrap` into `Reader`, which is their only caller
-  - replace the chained link condition with a named predicate, and the group fallbacks with
-    `Objects.requireNonNullElse`
-  - drop `flushListItem`, which did the same as `flushBlock` inside a list
+    - split the non-text element regex into three simple patterns, bringing its complexity under the allowed limit
+    - escape the non-breaking space in the entity table, which was an invisible literal
+    - reduce the reader loop to a single exit
+    - move `tagName`, `href`, `normalise` and `wrap` into `Reader`, which is their only caller
+    - replace the chained link condition with a named predicate, and the group fallbacks with
+      `Objects.requireNonNullElse`
+    - drop `flushListItem`, which did the same as `flushBlock` inside a list
 
 ### Changed
 

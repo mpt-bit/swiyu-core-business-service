@@ -43,33 +43,38 @@ public class StatusListValidator {
     private final IdentifierEntryService identifierEntryService;
     private final CryptoIntegrityValidator cryptoIntegrityValidator;
 
-    public void validateStatusListVcV2(StatusListEntry entry, String rawStatusListVc)
+    public void validateStatusListVcV2(StatusListEntry entry, String newRawStatusListVc, String oldRawStatusListVc)
         throws StatusListValidationFailedException {
-        if (rawStatusListVc == null || rawStatusListVc.isEmpty()) {
+        if (newRawStatusListVc == null || newRawStatusListVc.isEmpty()) {
             throw new StatusListValidationFailedException("Status list VC is null or empty", null);
         }
 
-        checkStatusListVcSize(rawStatusListVc);
+        checkStatusListVcSize(newRawStatusListVc);
 
-        SignedJWT statusListVc;
+        SignedJWT newStatusList;
+        SignedJWT oldStatusList = null;
         try {
-            statusListVc = SignedJWT.parse(rawStatusListVc);
+            newStatusList = SignedJWT.parse(newRawStatusListVc);
+            if (oldRawStatusListVc != null) {
+                oldStatusList = SignedJWT.parse(oldRawStatusListVc);
+            }
 
-            checkTypHeader(statusListVc.getHeader());
-            checkProfileVersionHeader(statusListVc.getHeader());
+            checkTypHeader(newStatusList.getHeader());
+            checkProfileVersionHeader(newStatusList.getHeader());
 
-            checkStatusListCryptoIntegrity(statusListVc);
-            checkStatusListConformsToSchema(statusListVc);
+            checkStatusListCryptoIntegrity(newStatusList);
+            checkStatusListConformsToSchema(newStatusList);
 
-            checkExpClaimIsSet(statusListVc);
-            checkStatusListIsNewlyCreated(statusListVc);
+            checkExpClaimIsSet(newStatusList);
+            checkStatusListIsNewlyCreated(newStatusList);
+            checkStatusListIsMoreRecentThanBefore(newStatusList, oldStatusList);
 
-            checkDecompressedStatusList(statusListVc);
+            checkDecompressedStatusList(newStatusList);
 
             if (entry.getUploadCount() == 0) {
-                checkStatusListBelongsToBusinessPartner(entry, statusListVc);
+                checkStatusListBelongsToBusinessPartner(entry, newStatusList);
             } else {
-                checkStatusListIsFromSameIssuer(entry, statusListVc);
+                checkStatusListIsFromSameIssuer(entry, newStatusList);
             }
         } catch (ParseException e) {
             throw new StatusListValidationFailedException("Statuslist VC could not be parsed.", e);
@@ -98,6 +103,24 @@ public class StatusListValidator {
             }
         } catch (ParseException e) {
             throw new StatusListValidationFailedException("Statuslist VC could not be parsed.", e);
+        }
+    }
+
+    private void checkStatusListIsMoreRecentThanBefore(SignedJWT newStatusList, SignedJWT oldStatusList) {
+        try {
+            if (
+                oldStatusList != null &&
+                newStatusList
+                    .getJWTClaimsSet()
+                    .getIssueTime()
+                    .compareTo(oldStatusList.getJWTClaimsSet().getIssueTime()) <
+                0
+            ) {
+                throw new StatusListValidationFailedException("Status list is older than last upload.", null);
+            }
+        } catch (ParseException e) {
+            // either the new or the old status list did not provide an iat (issued at) claim
+            // Nothing to compare here
         }
     }
 
@@ -130,7 +153,7 @@ public class StatusListValidator {
         }
     }
 
-    private void checkStatusListIsNewlyCreated(SignedJWT statusListVc) throws ParseException {
+    void checkStatusListIsNewlyCreated(SignedJWT statusListVc) throws ParseException {
         if (
             statusListVc
                 .getJWTClaimsSet()
@@ -143,7 +166,7 @@ public class StatusListValidator {
         }
     }
 
-    private void checkStatusListBelongsToBusinessPartner(StatusListEntry entry, SignedJWT statusListVc) {
+    void checkStatusListBelongsToBusinessPartner(StatusListEntry entry, SignedJWT statusListVc) {
         String issuerDID;
         try (var did = DidKt.getDidFromAbsoluteKid(statusListVc.getHeader().getKeyID())) {
             issuerDID = did.asString();
@@ -233,7 +256,7 @@ public class StatusListValidator {
         }
     }
 
-    private void checkDecompressedStatusList(SignedJWT statusListVc) throws ParseException {
+    void checkDecompressedStatusList(SignedJWT statusListVc) throws ParseException {
         var statusListClaim = statusListVc.getJWTClaimsSet().getJSONObjectClaim("status_list");
         if (statusListClaim == null) {
             throw new StatusListValidationFailedException("status_list claim must be set in the status list JWT", null);

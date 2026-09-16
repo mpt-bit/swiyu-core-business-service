@@ -57,4 +57,9 @@ ignore:
         reason: No fix available in ubi9 JRE base image yet
         expires: 2026-11-09T09:00:00.000Z
         created: 2026-07-01T12:25:16.970Z
+  SNYK-JAVA-ORGXERIALSNAPPY-19778376:
+    - '*':
+        reason: No fix available yet
+        expires: 2026-11-09T09:00:00.000Z
+        created: 2026-07-01T12:25:16.970Z
 patch:

@@ -2,6 +2,7 @@ package ch.admin.bj.swiyu.core.business.modules.status.service;
 
 import static ch.admin.bj.swiyu.core.business.test.StatusTestData.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -27,6 +28,7 @@ import ch.admin.bj.swiyu.core.business.test.StatusTestData;
 import ch.admin.bj.swiyu.core.business.test.TestRepositories;
 import ch.admin.bj.swiyu.core.business.test.container.WithAllTestContainerInitializers;
 import ch.admin.bj.swiyu.registry.status.StatusRegistryConfig;
+import java.text.ParseException;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -257,7 +259,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_TYP_HEADER)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_TYP_HEADER, null)
         );
 
         // THEN
@@ -271,7 +273,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_WRONG_TYP_HEADER)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_WRONG_TYP_HEADER, null)
         );
 
         // THEN
@@ -285,7 +287,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_PROFILE_VERSION)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_PROFILE_VERSION, null)
         );
 
         // THEN
@@ -299,7 +301,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_WRONG_PROFILE_VERSION)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_WRONG_PROFILE_VERSION, null)
         );
 
         // THEN
@@ -314,7 +316,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_EXP_CLAIM)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_MISSING_EXP_CLAIM, null)
         );
 
         // THEN
@@ -322,6 +324,44 @@ class StatusListValidatorIT {
     }
 
     @Test
+    void statusListInvalid_olderThanExistingStatuslist() throws ParseException {
+        // GIVEN
+        var entry = new StatusListEntry(UUID.randomUUID(), UUID.randomUUID());
+        doNothing().when(statusListValidator).checkStatusListCryptoIntegrity(any());
+        doNothing().when(statusListValidator).checkStatusListIsNewlyCreated(any());
+
+        // WHEN
+        var exception = assertThrows(StatusListValidationFailedException.class, () ->
+            statusListValidator.validateStatusListVcV2(
+                entry,
+                VALID_STATUS_LIST_VC_FROM_ISSUER_B_OLDER,
+                VALID_STATUS_LIST_VC_FROM_ISSUER_B_NEWER
+            )
+        );
+
+        // THEN
+        assertThat(exception.getAdditionalDetails().getFirst()).contains("Status list is older than last upload");
+    }
+
+    @Test
+    void statusListValid_newerThanExistingStatuslist() throws ParseException {
+        // GIVEN
+        var entry = new StatusListEntry(UUID.randomUUID(), UUID.randomUUID());
+        doNothing().when(statusListValidator).checkStatusListCryptoIntegrity(any());
+        doNothing().when(statusListValidator).checkStatusListIsNewlyCreated(any());
+        doNothing().when(statusListValidator).checkDecompressedStatusList(any());
+        doNothing().when(statusListValidator).checkStatusListBelongsToBusinessPartner(any(), any());
+
+        // WHEN
+        assertDoesNotThrow(() ->
+            statusListValidator.validateStatusListVcV2(
+                entry,
+                VALID_STATUS_LIST_VC_FROM_ISSUER_B_NEWER,
+                VALID_STATUS_LIST_VC_FROM_ISSUER_B_OLDER
+            )
+        );
+    }
+
     void statusListInvalid_oversizedDecompressedLst() {
         // GIVEN
         var entry = new StatusListEntry(UUID.randomUUID(), UUID.randomUUID());
@@ -329,7 +369,7 @@ class StatusListValidatorIT {
 
         // WHEN
         var exception = assertThrows(StatusListValidationFailedException.class, () ->
-            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_OVERSIZED_DECOMPRESSED_LST)
+            statusListValidator.validateStatusListVcV2(entry, INVALID_SWISS_PROFILE_OVERSIZED_DECOMPRESSED_LST, null)
         );
 
         // THEN

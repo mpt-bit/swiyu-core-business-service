@@ -15,6 +15,7 @@ import ch.admin.bj.swiyu.core.business.modules.status.api.StatusListEntryLimitsD
 import ch.admin.bj.swiyu.core.business.modules.status.config.StatusListsLimitProperties;
 import ch.admin.bj.swiyu.core.business.modules.status.domain.StatusListEntry;
 import ch.admin.bj.swiyu.core.business.modules.status.domain.StatusListEntryRepository;
+import ch.admin.bj.swiyu.registry.status.common.exception.StatusListNotFoundException;
 import ch.admin.bj.swiyu.registry.status.service.StatusListRegistryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -87,7 +88,14 @@ public class StatusListEntryService {
         var entry = statusListEntryRepository
             .findByBusinessEntityIdAndStatusRegistryEntryId(businessEntityId, statusRegistryEntryId)
             .orElseThrow(() -> new ResourceNotFoundException("No such status list entry id is known."));
-        statusListValidator.validateStatusListVcV2(entry, statusListVc);
+
+        String oldStatusList = null;
+        try {
+            oldStatusList = statusListRegistryService.getStatusListVc(entry.getStatusRegistryEntryId());
+        } catch (StatusListNotFoundException e) {
+            // Nothing to do, this is a newly uploaded statuslist
+        }
+        statusListValidator.validateStatusListVcV2(entry, statusListVc, oldStatusList);
         publish(entry, statusListVc, businessEntityId);
     }
 
