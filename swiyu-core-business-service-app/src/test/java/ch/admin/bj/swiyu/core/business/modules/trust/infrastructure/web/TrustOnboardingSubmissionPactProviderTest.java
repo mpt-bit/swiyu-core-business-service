@@ -12,7 +12,6 @@ import au.com.dius.pact.provider.junitsupport.IgnoreNoPactsToVerify;
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.State;
 import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
-import ch.admin.bit.jeap.messaging.avro.security.AvroClassSecurity;
 import ch.admin.bit.jeap.security.test.resource.configuration.JeapOAuth2IntegrationTestResourceConfiguration;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartnerRepository;
 import ch.admin.bj.swiyu.core.business.modules.trust.domain.onboarding.TrustOnboardingSubmissionRepository;
@@ -20,7 +19,6 @@ import ch.admin.bj.swiyu.core.business.test.container.WithAllTestContainerInitia
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,13 +52,6 @@ class TrustOnboardingSubmissionPactProviderTest {
 
     @Autowired
     private BusinessPartnerRepository businessPartnerRepository;
-
-    @BeforeAll
-    static void init() {
-        // here set the system property "pactbroker.consumerversionselectors.rawjson" in case you want to fetch branch specific consumer tests
-        // see https://confluence.bit.admin.ch/spaces/JEAP/pages/684758576/Details+zur+jEAP-Integration+von+Pact
-        AvroClassSecurity.installDefaultIfMissing();
-    }
 
     @BeforeEach
     void setUp(PactVerificationContext context) {

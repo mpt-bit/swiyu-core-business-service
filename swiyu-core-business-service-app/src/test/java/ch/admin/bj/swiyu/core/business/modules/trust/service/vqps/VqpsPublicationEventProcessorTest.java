@@ -3,7 +3,6 @@ package ch.admin.bj.swiyu.core.business.modules.trust.service.vqps;
 import static ch.admin.bj.swiyu.core.business.test.VqpsSubmissionTestData.vqpsJwt;
 import static org.mockito.Mockito.verify;
 
-import ch.admin.bit.jeap.messaging.avro.security.AvroClassSecurity;
 import ch.admin.bj.swiyu.core.business.modules.trust.api.VqpsPublicationFailureReasonDto;
 import ch.admin.bj.swiyu.messagetype.ti.*;
 import com.nimbusds.jose.JOSEException;
@@ -11,7 +10,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,11 +27,6 @@ class VqpsPublicationEventProcessorTest {
 
     @InjectMocks
     private VqpsPublicationEventProcessor processor;
-
-    @BeforeAll
-    static void installAvroClassWhitelist() {
-        AvroClassSecurity.installDefaultIfMissing();
-    }
 
     @Test
     void processVqpsPublicationSucceeded()

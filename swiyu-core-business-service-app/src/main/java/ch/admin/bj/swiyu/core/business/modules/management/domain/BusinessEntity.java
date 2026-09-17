@@ -139,16 +139,6 @@ public class BusinessEntity {
         );
     }
 
-    /**
-     * @deprecated since 1.13.35. Used only by the deprecated V1 create endpoint
-     *     ({@code BusinessPartnerService.createBusinessPartnerV1}); will be removed with it.
-     */
-    @SuppressWarnings("java:S1133")
-    @Deprecated(since = "1.13.35")
-    public BusinessEntity(UUID id, String name, String contactEmail, BusinessPartnerType type) {
-        this(id, fromSingleName(name), Contact.builder().email(contactEmail).build(), type, null, null);
-    }
-
     protected BusinessEntity() {
         // JPA
     }

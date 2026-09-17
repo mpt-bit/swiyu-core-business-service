@@ -1,22 +1,19 @@
 package ch.admin.bj.swiyu.core.business.modules.management.service;
 
+import static ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData.businessPartnerOfTypeBusiness;
 import static ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData.businessPartnerOfTypeGov;
-import static ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData.businessPartnerOfTypeUnknown;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.WithJeapAuthenticationToken;
-import ch.admin.bj.swiyu.core.business.common.api.AddressDto;
 import ch.admin.bj.swiyu.core.business.common.api.BusinessPartnerTypeDto;
-import ch.admin.bj.swiyu.core.business.common.api.ContactDto;
-import ch.admin.bj.swiyu.core.business.common.api.LanguageDto;
 import ch.admin.bj.swiyu.core.business.common.domain.Address;
 import ch.admin.bj.swiyu.core.business.common.domain.BusinessPartnerType;
 import ch.admin.bj.swiyu.core.business.common.exceptions.ResourceNotFoundException;
 import ch.admin.bj.swiyu.core.business.common.service.LocalizedMapUtil;
 import ch.admin.bj.swiyu.core.business.modules.identifier.service.IdentifierEntryService;
-import ch.admin.bj.swiyu.core.business.modules.management.api.CreateBusinessEntityDto;
 import ch.admin.bj.swiyu.core.business.modules.management.api.CreatePartnerDto;
 import ch.admin.bj.swiyu.core.business.modules.management.api.UpdateBusinessEntityDto;
 import ch.admin.bj.swiyu.core.business.modules.status.service.StatusListEntryService;
@@ -64,7 +61,7 @@ class BusinessPartnerServiceIT {
     @Test
     void getBusinessEntities() {
         // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
+        var partner = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
         repos.commit();
         // WHEN
         var readEntity = businessPartnerService.getBusinessEntity(partner.getId());
@@ -79,7 +76,7 @@ class BusinessPartnerServiceIT {
     @Test
     void getBusinessPartners() {
         // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
+        var partner = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
         repos.commit();
         // WHEN
         var readEntity = businessPartnerService.getBusinessPartner(partner.getId());
@@ -100,53 +97,16 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void createBusinessPartnerV1() {
-        // GIVEN
-        var createBusinessEntityDto = new CreateBusinessEntityDto("Hallo Welt AG", "hello.world@example.com", null);
-        // WHEN
-        var businessEntity = businessPartnerService.createBusinessPartnerV1(
-            createBusinessEntityDto,
-            lookupPamsAdminUserUid()
-        );
-        // THEN
-        assertThat(businessEntity).isNotNull();
-        assertThat(businessEntity.id()).isNotNull();
-    }
-
-    @Test
-    void createGovernmentalBusinessEntity() {
-        // GIVEN
-        var createBusinessEntityDto = new CreateBusinessEntityDto(
-            "Hallo Welt AG",
-            "hello.world@example.com",
-            BusinessPartnerTypeDto.GOVERNMENTAL_INSTITUTION
-        );
-        // WHEN
-        var businessEntity = businessPartnerService.createBusinessPartnerV1(
-            createBusinessEntityDto,
-            lookupPamsAdminUserUid()
-        );
-        // THEN
-        assertThat(businessEntity).isNotNull();
-        assertThat(businessEntity.id()).isNotNull();
-    }
-
-    @Test
     void createBusinessPartnerV2() {
         // GIVEN
         var createBusinessEntityDto = new CreatePartnerDto(
             "Hallo Welt AG",
-            null,
+            BusinessPartnerTypeDto.BUSINESS,
             "uid",
-            new AddressDto("addressStreet", "addressCity", "3000", "addressCountry", "addressRegion"),
-            ContactDto.builder()
-                .firstName("John")
-                .lastName("Doe")
-                .email("hello.world@example.com")
-                .phone("+41 78 1234567")
-                .correspondingLanguage(LanguageDto.DE)
-                .build()
-        ); // WHEN
+            BusinessEntityTestData.someAddressDto(),
+            BusinessEntityTestData.someContactDto()
+        );
+        // WHEN
         var businessEntity = businessPartnerService.createBusinessPartnerV2(
             createBusinessEntityDto,
             lookupPamsAdminUserUid()
@@ -157,20 +117,14 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void createGovernmentalBusinessPartner() {
+    void createGovernmentalBusinessPartnerV2() {
         // GIVEN
         var createBusinessEntityDto = new CreatePartnerDto(
             "Hallo Welt AG",
             BusinessPartnerTypeDto.GOVERNMENTAL_INSTITUTION,
             "uid",
-            new AddressDto("addressStreet", "addressCity", "3000", "addressCountry", "addressRegion"),
-            ContactDto.builder()
-                .firstName("John")
-                .lastName("Doe")
-                .email("hello.world@example.com")
-                .phone("+41 78 1234567")
-                .correspondingLanguage(LanguageDto.DE)
-                .build()
+            BusinessEntityTestData.someAddressDto(),
+            BusinessEntityTestData.someContactDto()
         ); // WHEN
         var businessEntity = businessPartnerService.createBusinessPartnerV2(
             createBusinessEntityDto,
@@ -184,9 +138,8 @@ class BusinessPartnerServiceIT {
     @Test
     void updateBusinessEntity() {
         // GIVEN
-        var createBusinessEntityDto = new CreateBusinessEntityDto("Hallo Welt AG", "hello.world@example.com", null);
-        var oldBusinessEntity = businessPartnerService.createBusinessPartnerV1(
-            createBusinessEntityDto,
+        var oldBusinessEntity = businessPartnerService.createBusinessPartnerV2(
+            BusinessEntityTestData.createPartnerDto(),
             lookupPamsAdminUserUid()
         );
         var updateBusinessEntityDto = new UpdateBusinessEntityDto("example name", "hello.brave.new.world@example.com");
@@ -212,7 +165,7 @@ class BusinessPartnerServiceIT {
     @Test
     void updateBusinessPartner() {
         // GIVEN
-        var businessEntity = businessPartnerOfTypeUnknown(UUID.randomUUID());
+        var businessEntity = businessPartnerOfTypeBusiness(UUID.randomUUID());
         repos.businessPartner.save(businessEntity);
         repos.commit();
 
@@ -256,52 +209,9 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void updateBusinessEntityGovStatus_withNonExistingActor_throws() {
-        // GIVEN
-        var inexistantId = UUID.fromString("deadbeef-0000-0000-0000-000000000000");
-        // WHEN / THEN
-        Assertions.assertThatThrownBy(() ->
-            businessPartnerService.updateBusinessEntityIsGovernment(inexistantId, true)
-        ).isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void updateBusinessEntityGovStatus_withExistingGovActor() {
-        // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeGov(UUID.randomUUID()));
-        repos.commit();
-
-        // WHEN / THEN
-        Assertions.assertThat(businessPartnerService.updateBusinessEntityIsGovernment(partner.getId(), true)).isNull();
-    }
-
-    @Test
-    void updateBusinessEntityGovStatus_withExistingNonGovActorToTrue() {
-        // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
-        repos.commit();
-
-        // WHEN / THEN
-        var updatedPartner = businessPartnerService.updateBusinessEntityIsGovernment(partner.getId(), true);
-        Assertions.assertThat(updatedPartner).isNotNull();
-        Assertions.assertThat(updatedPartner.id()).isEqualTo(partner.getId());
-    }
-
-    @Test
-    void updateBusinessEntityGovStatus_withExistingNonGovActorToFalse() {
-        // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
-        repos.commit();
-
-        // WHEN / THEN
-        var updatedPartner = businessPartnerService.updateBusinessEntityIsGovernment(partner.getId(), false);
-        Assertions.assertThat(updatedPartner).isNull();
-    }
-
-    @Test
     void deleteBusinessEntity_withExistingPartner() {
         // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
+        var partner = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
         repos.commit();
 
         // WHEN / THEN
@@ -311,13 +221,15 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void validateIsGovernmental_withNull_shouldPass() {
+    void isGovernmental_withNull_shouldThrow() {
         // GIVEN / WHEN / THEN
-        assertFalse(() -> businessPartnerService.isGovernmental(null));
+        assertThatThrownBy(() -> businessPartnerService.isGovernmental(null)).isInstanceOf(
+            IllegalArgumentException.class
+        );
     }
 
     @Test
-    void validateIsGovernmental_withGovernmentalEntity_shouldPass() {
+    void isGovernmental_withGovernmentalEntity_shouldBeTrue() {
         // GIVEN
         var partner = repos.businessPartner.save(businessPartnerOfTypeGov(UUID.randomUUID()));
         repos.commit();
@@ -328,9 +240,9 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void validateIsGovernmental_withNonGovernmentalEntity_shouldThrow() {
+    void isGovernmental_withNonGovernmentalEntity_shouldBeFalse() {
         // GIVEN
-        var partner = repos.businessPartner.save(businessPartnerOfTypeUnknown(UUID.randomUUID()));
+        var partner = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
         repos.commit();
 
         // WHEN
@@ -341,12 +253,14 @@ class BusinessPartnerServiceIT {
     }
 
     @Test
-    void validateIsGovernmental_withNonExistentEntity_shouldThrow() {
+    void isGovernmental_withNonExistentEntity_shouldThrow() {
         // GIVEN
         var randomId = UUID.randomUUID();
 
         // WHEN & THEN
-        assertFalse(() -> businessPartnerService.isGovernmental(randomId));
+        assertThatThrownBy(() -> businessPartnerService.isGovernmental(randomId)).isInstanceOf(
+            ResourceNotFoundException.class
+        );
     }
 
     /**

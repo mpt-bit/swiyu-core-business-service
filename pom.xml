@@ -5,7 +5,7 @@
 
     <groupId>ch.admin.bj.swiyu</groupId>
     <artifactId>swiyu-core-business-service</artifactId>
-    <version>3.44.0-SNAPSHOT</version>
+    <version>4.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>ch.admin.bit.jeap</groupId>
@@ -75,15 +75,26 @@
                 <version>${project.version}</version>
             </dependency>
             <!-- CVE-OVERRIDE start -->
-            <!-- zstd-jni arrives transitively through kafka-clients, both at runtime via the
-                 messaging starter and in the test scope via jeap-messaging-infrastructure-kafka-test.
-                 1.5.6-10 carries five high severity issues (out-of-bounds read, integer overflow, use
-                 after free); 1.5.7-14 is the first version with all of them fixed. Remove once the
-                 jeap parent brings a kafka-clients that resolves it on its own. -->
             <dependency>
-                <groupId>com.github.luben</groupId>
-                <artifactId>zstd-jni</artifactId>
-                <version>1.5.7-14</version>
+<!--            Allocation of Resources Without Limits or Throttling (new) [High Severity][https://security.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONCORE-19778370] in com.fasterxml.jackson.core:jackson-databind@2.22.1-->
+<!--            introduced by com.networknt:json-schema-validator@1.5.9 > com.fasterxml.jackson.core:jackson-databind@2.22.1-->
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>3.0.6</version>
+            </dependency>
+            <dependency>
+<!--            Out-of-bounds Write [High Severity][https://security.snyk.io/vuln/SNYK-JAVA-ORGXERIALSNAPPY-19778376] in org.xerial.snappy:snappy-java@1.1.10.7-->
+<!--            introduced by ch.admin.bit.jeap:jeap-messaging-infrastructure-kafka-test@18.14.0 > org.springframework.kafka:spring-kafka-test@4.1.1 > org.apache.kafka:kafka-clients@4.2.1 > org.xerial.snappy:snappy-java@1.1.10.7-->
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.10.8</version>
+            </dependency>
+            <dependency>
+<!--            Allocation of Resources Without Limits or Throttling [High Severity][https://security.snyk.io/vuln/SNYK-JAVA-TOOLSJACKSONCORE-19778371] in tools.jackson.core:jackson-databind@3.1.5-->
+<!--            introduced by ch.admin.bj.swiyu:swiyu-discrete-validator-client@4.0.0-SNAPSHOT-20260916071558-f59ff90f > tools.jackson.core:jackson-databind@3.1.5-->
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-databind-nullable</artifactId>
+                <version>3.1.6</version>
             </dependency>
             <!-- CVE-OVERRIDE end -->
 

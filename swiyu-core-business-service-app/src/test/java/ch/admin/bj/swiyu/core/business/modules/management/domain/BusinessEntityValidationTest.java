@@ -32,7 +32,10 @@ class BusinessEntityValidationTest {
             UUID.randomUUID(),
             "Valid Name",
             "invalid-email@",
-            BusinessPartnerType.BUSINESS
+            BusinessPartnerType.BUSINESS,
+            null,
+            null,
+            null
         );
 
         var violations = validator.validate(entity);
@@ -50,7 +53,10 @@ class BusinessEntityValidationTest {
             UUID.randomUUID(),
             "Valid Name",
             "valid.email@example.com",
-            BusinessPartnerType.BUSINESS
+            BusinessPartnerType.BUSINESS,
+            null,
+            null,
+            null
         );
 
         var violations = validator.validate(entity);

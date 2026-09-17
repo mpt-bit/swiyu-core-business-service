@@ -122,7 +122,6 @@ public class TrustDeclarationOfIntentPdfService {
         return prefix + today.format(formatter);
     }
 
-    @SuppressWarnings({ "java:S1874" }) // Remove with EID-6656
     private static String getCorrectPdfFilename(
         TrustOnboardingSubmission trustOnboardingSubmission,
         Language language
@@ -133,7 +132,6 @@ public class TrustDeclarationOfIntentPdfService {
             case INDIVIDUAL -> Boolean.TRUE.equals(trustOnboardingSubmission.getIsRegisteredInCommercialRegister())
                 ? DOI_TEMPLATES_INDIVIDUAL_BUSINESS_PREFIX
                 : DOI_TEMPLATES_INDIVIDUAL_PRIVATE_PREFIX;
-            case UNKNOWN -> throw new DeclarationOfIntentPdfGenerationException("Unknown partner type");
         };
         var signatureCount = trustOnboardingSubmission
             .getSigningRule()

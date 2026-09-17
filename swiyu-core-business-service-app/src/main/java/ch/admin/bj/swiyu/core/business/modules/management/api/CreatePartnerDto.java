@@ -26,6 +26,7 @@ public record CreatePartnerDto(
     @NotNull
     @Schema(description = "Type of the business partner.", example = "GOVERNMENTAL_INSTITUTION")
     BusinessPartnerTypeDto partnerType,
+
     @Pattern(regexp = SWISS_UID_PATTERN)
     @Schema(
         description = "Swiss UID of the partner (e.g. CHE-123.456.789). Optional, validated when present.",

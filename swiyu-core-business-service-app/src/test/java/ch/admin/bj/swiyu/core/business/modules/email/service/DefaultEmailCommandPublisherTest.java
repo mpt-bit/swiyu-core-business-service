@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import ch.admin.bit.jeap.messaging.avro.security.AvroClassSecurity;
 import ch.admin.bit.jeap.messaging.transactionaloutbox.outbox.TransactionalOutbox;
 import ch.admin.bj.swiyu.core.business.common.config.FunctionalityProperties;
 import ch.admin.bj.swiyu.core.business.common.email.EmailCommandPublisher;
@@ -28,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -93,11 +91,6 @@ class DefaultEmailCommandPublisherTest {
             businessPartnerService,
             sentNotificationService
         );
-    }
-
-    @BeforeAll
-    static void installAvroClassWhitelist() {
-        AvroClassSecurity.installDefaultIfMissing();
     }
 
     static Stream<Arguments> allEmailTypes() {

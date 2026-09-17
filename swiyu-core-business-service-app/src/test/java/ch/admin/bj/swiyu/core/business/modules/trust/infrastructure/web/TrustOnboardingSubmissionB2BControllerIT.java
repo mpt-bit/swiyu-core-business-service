@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import ch.admin.bj.swiyu.core.business.common.api.AddressDto;
+import ch.admin.bj.swiyu.core.business.common.api.BusinessPartnerTypeDto;
 import ch.admin.bj.swiyu.core.business.common.api.ContactDto;
 import ch.admin.bj.swiyu.core.business.common.api.LanguageDto;
 import ch.admin.bj.swiyu.core.business.common.did.DidPublicKeyLoader;
@@ -104,6 +105,7 @@ class TrustOnboardingSubmissionB2BControllerIT {
                     .build()
             )
             .dids(List.of("did:example:123", "did:example:abc"))
+            .requestedPartnerType(BusinessPartnerTypeDto.BUSINESS)
             .build();
         trustOnboardingService.createTrustOnboardingSubmission(requestDto);
 
@@ -151,6 +153,7 @@ class TrustOnboardingSubmissionB2BControllerIT {
                     .build()
             )
             .dids(List.of("did:example:123", "did:example:abc"))
+            .requestedPartnerType(BusinessPartnerTypeDto.BUSINESS)
             .build();
         trustOnboardingService.createTrustOnboardingSubmission(requestDto);
 
@@ -192,6 +195,7 @@ class TrustOnboardingSubmissionB2BControllerIT {
                     .build()
             )
             .dids(List.of("did:example:123"))
+            .requestedPartnerType(BusinessPartnerTypeDto.BUSINESS)
             .build();
         var pop = trustOnboardingService.createTrustOnboardingSubmission(requestDto).proofOfPossessions().getFirst();
 

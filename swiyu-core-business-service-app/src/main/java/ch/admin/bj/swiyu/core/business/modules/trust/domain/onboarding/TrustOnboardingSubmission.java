@@ -118,6 +118,7 @@ public class TrustOnboardingSubmission {
     private String partnerNote;
 
     @Getter
+    @NotNull
     @Enumerated(EnumType.STRING)
     private BusinessPartnerType requestedPartnerType;
 
@@ -146,6 +147,7 @@ public class TrustOnboardingSubmission {
         this.entityName = entityName;
         this.status = status;
         this.initiatedAt = Instant.now();
+        this.requestedPartnerType = BusinessPartnerType.BUSINESS;
     }
 
     public TrustOnboardingSubmission( // NOSONAR

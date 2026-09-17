@@ -18,11 +18,4 @@ public enum BusinessPartnerTypeDto {
     GOVERNMENTAL_INSTITUTION,
     BUSINESS,
     INDIVIDUAL,
-    /**
-     * @deprecated since 3.40.3. Legacy placeholder – all existing entries have been migrated to BUSINESS.
-     * Must not be used in new v2 onboarding requests.
-     */
-    @SuppressWarnings("java:S1133")
-    @Deprecated(since = "3.40.3")
-    UNKNOWN,
 }

@@ -5,28 +5,27 @@ import static ch.admin.bj.swiyu.core.business.modules.trust.service.onboarding.P
 import static ch.admin.bj.swiyu.core.business.test.TrustOnboardingSubmissionTestData.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.WithJeapAuthenticationToken;
 import ch.admin.bj.swiyu.antivirus.client.api.ScanApi;
 import ch.admin.bj.swiyu.antivirus.client.model.ScanResult;
 import ch.admin.bj.swiyu.core.business.common.api.AddressDto;
+import ch.admin.bj.swiyu.core.business.common.api.BusinessPartnerTypeDto;
 import ch.admin.bj.swiyu.core.business.common.api.ContactDto;
 import ch.admin.bj.swiyu.core.business.common.audit.AuditPublisher;
 import ch.admin.bj.swiyu.core.business.common.did.DidPublicKeyLoader;
-import ch.admin.bj.swiyu.core.business.common.domain.*;
+import ch.admin.bj.swiyu.core.business.common.domain.Address;
+import ch.admin.bj.swiyu.core.business.common.domain.BusinessPartnerType;
+import ch.admin.bj.swiyu.core.business.common.domain.Contact;
+import ch.admin.bj.swiyu.core.business.common.domain.Language;
 import ch.admin.bj.swiyu.core.business.common.email.EmailCommandPublisher;
 import ch.admin.bj.swiyu.core.business.common.exceptions.ResourceNotFoundException;
 import ch.admin.bj.swiyu.core.business.common.exceptions.ValidationException;
 import ch.admin.bj.swiyu.core.business.modules.documents.service.PartnerDocumentService;
 import ch.admin.bj.swiyu.core.business.modules.management.api.BusinessPartnerTrustStatusDto;
-import ch.admin.bj.swiyu.core.business.modules.management.api.CreateBusinessEntityDto;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.pams.PamsClient;
 import ch.admin.bj.swiyu.core.business.modules.management.service.BusinessPartnerService;
 import ch.admin.bj.swiyu.core.business.modules.trust.api.*;
@@ -267,6 +266,7 @@ class TrustOnboardingServiceIT {
             .correspondingLanguage(resultDto.correspondingLanguage())
             .registryIds(resultDto.registryIds())
             .dids(resultDto.proofOfPossessions().stream().map(ProofOfPossessionDto::did).toList())
+            .requestedPartnerType(BusinessPartnerTypeDto.BUSINESS)
             .build();
         var resultDto2 = service.updateTrustOnboardingSubmission(resultDto.id(), requestDto);
 
@@ -376,6 +376,7 @@ class TrustOnboardingServiceIT {
                     Stream.of("did:example:new")
                 ).toList()
             )
+            .requestedPartnerType(BusinessPartnerTypeDto.BUSINESS)
             .build();
         var resultDto2 = service.updateTrustOnboardingSubmission(resultDto.id(), requestDto);
 
@@ -632,9 +633,8 @@ class TrustOnboardingServiceIT {
     @Test
     void markAsSucceeded_succeeds() {
         // GIVEN
-        var createBusinessEntityDto = new CreateBusinessEntityDto("Hallo Welt AG", "hello.world@example.com", null);
-        var businessEntity = businessPartnerService.createBusinessPartnerV1(
-            createBusinessEntityDto,
+        var businessEntity = businessPartnerService.createBusinessPartnerV2(
+            BusinessEntityTestData.createPartnerDto(),
             lookupPamsAdminUserUid()
         );
         var submission = repos.trustOnboardingSubmission.save(
@@ -655,9 +655,8 @@ class TrustOnboardingServiceIT {
     @Test
     void markAsSucceeded_updatesBusinessPartnerWithSubmissionDetails() {
         // GIVEN
-        var createBusinessEntityDto = new CreateBusinessEntityDto("Hallo Welt AG", "hello.world@example.com", null);
-        var businessEntity = businessPartnerService.createBusinessPartnerV1(
-            createBusinessEntityDto,
+        var businessEntity = businessPartnerService.createBusinessPartnerV2(
+            BusinessEntityTestData.createPartnerDto(),
             lookupPamsAdminUserUid()
         );
         var partnerId = businessEntity.id();

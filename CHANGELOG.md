@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 4.0.0
+
+### Changed
+
+- Contract onboarding v1
+- Remove CVE workaround for com.github.luben:zstd-jni:1.5.7-14
+
+## 3.44.1
+
+### Changed
+
+- Fix cve about json-schema-validator, snappy-java, jackson-databind-nullable
+
 ## 3.44.0
 
 ### Added

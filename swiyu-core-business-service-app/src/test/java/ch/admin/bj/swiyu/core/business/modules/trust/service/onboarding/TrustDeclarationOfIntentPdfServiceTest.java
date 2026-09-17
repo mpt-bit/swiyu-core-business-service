@@ -104,17 +104,6 @@ class TrustDeclarationOfIntentPdfServiceTest {
         }
     }
 
-    @SuppressWarnings({ "java:S1874" }) // Remove with EID-6656
-    @Test
-    void streamFilledDeclarationOfIntentPdf_withUnknownPartnerType_throwsDeclarationOfIntentPdfGenerationException() {
-        var submission = submission(BusinessPartnerType.UNKNOWN, SigningRule.SINGLE_SIGNATURE, List.of(), true);
-        when(trustOnboardingSubmissionService.getTrustOnboardingSubmission(submissionId)).thenReturn(submission);
-
-        assertThatThrownBy(() -> generatePdfBytes(submissionId, Language.DE))
-            .isInstanceOf(DeclarationOfIntentPdfGenerationException.class)
-            .hasMessageContaining("Unknown partner type");
-    }
-
     @Test
     void streamFilledDeclarationOfIntentPdf_allSwissLocalesExist() {
         var submission = businessSubmission(SigningRule.SINGLE_SIGNATURE, List.of(signatory("John", "Doe")));

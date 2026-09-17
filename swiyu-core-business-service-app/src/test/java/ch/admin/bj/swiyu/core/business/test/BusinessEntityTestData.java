@@ -2,8 +2,13 @@ package ch.admin.bj.swiyu.core.business.test;
 
 import static ch.admin.bj.swiyu.core.business.common.service.LocalizedMapUtil.fromLanguages;
 
+import ch.admin.bj.swiyu.core.business.common.api.AddressDto;
+import ch.admin.bj.swiyu.core.business.common.api.BusinessPartnerTypeDto;
+import ch.admin.bj.swiyu.core.business.common.api.ContactDto;
+import ch.admin.bj.swiyu.core.business.common.api.LanguageDto;
 import ch.admin.bj.swiyu.core.business.common.domain.Address;
 import ch.admin.bj.swiyu.core.business.common.domain.BusinessPartnerType;
+import ch.admin.bj.swiyu.core.business.modules.management.api.CreatePartnerDto;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessEntity;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartnerIdentity;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartnerIdentityStatus;
@@ -11,11 +16,11 @@ import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartner
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.experimental.UtilityClass;
 
-@AllArgsConstructor
 @Getter
+@UtilityClass
 public class BusinessEntityTestData {
 
     public static final String UNKNOWN_ENTITY_S = "11111111-1111-1111-1111-111111111111";
@@ -42,19 +47,6 @@ public class BusinessEntityTestData {
             BusinessPartnerType.BUSINESS,
             address(),
             "CHE-123.456.789",
-            "+41 78 1234567"
-        );
-    }
-
-    @SuppressWarnings({ "java:S1874" }) // Remove with EID-6656
-    public static BusinessEntity businessPartnerOfTypeUnknown(UUID partnerId) {
-        return new BusinessEntity(
-            partnerId,
-            "Unkown Name",
-            "unkown@example.com",
-            BusinessPartnerType.UNKNOWN,
-            address(),
-            null,
             "+41 78 1234567"
         );
     }
@@ -117,13 +109,12 @@ public class BusinessEntityTestData {
         return entityA;
     }
 
-    @SuppressWarnings({ "java:S1874" }) // Remove with EID-6656
     public static BusinessEntity businessPartnerB() {
         var entityB = new BusinessEntity(
             UUID.randomUUID(),
             "FooBar GmbH",
             "foobar@example.com",
-            BusinessPartnerType.UNKNOWN,
+            BusinessPartnerType.BUSINESS,
             address(),
             "CHE-123.456.789",
             "+41 78 1234567"
@@ -132,13 +123,12 @@ public class BusinessEntityTestData {
         return entityB;
     }
 
-    @SuppressWarnings({ "java:S1874" }) // Remove with EID-6656
     public static BusinessEntity businessPartnerC() {
         var entityC = new BusinessEntity(
             UUID.randomUUID(),
             "Hello Second Entry AG",
             "foobar@example.com",
-            BusinessPartnerType.UNKNOWN,
+            BusinessPartnerType.BUSINESS,
             address(),
             "CHE-123.456.789",
             "+41 78 1234567"
@@ -185,5 +175,34 @@ public class BusinessEntityTestData {
             .uid("CHE-123.456.789")
             .entityName(Map.of("default", "Hello World AG"))
             .build();
+    }
+
+    public static CreatePartnerDto createPartnerDto() {
+        return new CreatePartnerDto(
+            "Hallo Welt AG",
+            BusinessPartnerTypeDto.BUSINESS,
+            "CHE-123-456-789",
+            someAddressDto(),
+            someContactDto()
+        );
+    }
+
+    public static AddressDto someAddressDto(String prefix) {
+        return new AddressDto(prefix + "Street", prefix + "City", "3000", prefix + "Country", prefix + "Region");
+    }
+
+    public static AddressDto someAddressDto() {
+        return someAddressDto("address");
+    }
+
+    public static ContactDto someContactDto() {
+        return new ContactDto(
+            "John",
+            "Doe",
+            "hello.world@example.com",
+            "+41 78 123 45 67",
+            LanguageDto.EN,
+            someAddressDto("contact")
+        );
     }
 }
