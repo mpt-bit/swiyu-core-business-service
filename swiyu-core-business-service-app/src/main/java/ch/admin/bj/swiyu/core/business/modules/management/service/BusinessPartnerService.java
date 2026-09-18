@@ -28,8 +28,10 @@ import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartner
 import ch.admin.bj.swiyu.core.business.modules.management.domain.pams.PamsClient;
 import ch.admin.bj.swiyu.core.business.modules.management.service.mapper.BusinessPartnerMapper;
 import ch.admin.bj.swiyu.core.business.modules.trust.config.TrustOnboardingSubmissionLimitProperties;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.event.TiBusinessPartnerUpdatedEventBuilder;
 import ch.admin.bj.swiyu.core.business.modules.trust.domain.onboarding.TrustOnboardingSubmission;
 import ch.admin.bj.swiyu.core.business.modules.trust.domain.onboarding.TrustOnboardingSubmissionRepository;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.publisher.DomainEventPublisher;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.*;
@@ -49,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessPartnerService {
 
     private static final String BUSINESS_PARTNER_WITH_ID_S_NOT_FOUND = "Business partner with id '%s' not found.";
+    private static final int PUBLISH_PAGE_SIZE = 500;
     private static final Map<String, String> BUSINESS_PARTNER_SORT_FIELDS = Map.of(
         "name",
         "defaultEntityName",
@@ -61,6 +64,7 @@ public class BusinessPartnerService {
     private final PamsClient pamsClient;
     private final IdentifierEntryService identifierEntryService;
     private final AuditPublisher auditPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     private static @NonNull Supplier<ResourceNotFoundException> throwNotFoundException(UUID id) {
         return () -> new ResourceNotFoundException(String.format(BUSINESS_PARTNER_WITH_ID_S_NOT_FOUND, id));
@@ -107,6 +111,7 @@ public class BusinessPartnerService {
             String.valueOf(businessPartner.getVersion()),
             AuditMapper.toAuditJson(businessPartner)
         );
+        publishEventFor(businessPartner.getId());
         pamsClient.createBusinessPartner(businessPartner, pamsUserAdminDirUid);
         return toBusinessPartnerDto(businessPartner);
     }
@@ -143,6 +148,7 @@ public class BusinessPartnerService {
             String.valueOf(businessPartner.getVersion()),
             AuditMapper.toAuditJson(businessPartner)
         );
+        publishEventFor(businessPartner.getId());
         return toBusinessEntityDto(businessPartner);
     }
 
@@ -179,6 +185,7 @@ public class BusinessPartnerService {
             String.valueOf(businessPartner.getVersion()),
             AuditMapper.toAuditJson(businessPartner)
         );
+        publishEventFor(businessPartner.getId());
         return toBusinessPartnerDto(businessPartner);
     }
 
@@ -520,6 +527,47 @@ public class BusinessPartnerService {
             businessPartner.getId().toString(),
             String.valueOf(businessPartner.getVersion()),
             AuditMapper.toAuditJson(businessPartner)
+        );
+        publishEventFor(businessPartner.getId());
+    }
+
+    /**
+     * Publishes the TiBusinessPartnerUpdatedEvent for one partner (also the DevOps sync trigger,
+     * EID-6988). No state change, idempotent. Must not be invoked for BusinessPartnerIdentity
+     * changes - those originate from TMS and would be echoed back.
+     */
+    @Transactional // required: the outbox publisher demands an open transaction (MANDATORY)
+    public void publishBusinessPartnerUpdatedEvent(UUID businessPartnerId) {
+        log.info("Publishing TiBusinessPartnerUpdatedEvent for partner '{}'", businessPartnerId);
+        if (!businessPartnerRepository.existsById(businessPartnerId)) {
+            throw throwNotFoundException(businessPartnerId).get();
+        }
+        publishEventFor(businessPartnerId);
+    }
+
+    /**
+     * Publishes the TiBusinessPartnerUpdatedEvent for all partners (DevOps "sync all", EID-6988).
+     * Pages over the partner ids only, so the whole base is never loaded into the first-level cache.
+     */
+    @Transactional
+    public void publishAllBusinessPartnerUpdatedEvents() {
+        log.info("Publishing TiBusinessPartnerUpdatedEvent for all partners");
+        var pageable = Pageable.ofSize(PUBLISH_PAGE_SIZE);
+        Page<UUID> ids;
+        do {
+            ids = businessPartnerRepository.findAllIds(pageable);
+            ids.forEach(this::publishEventFor);
+            pageable = pageable.next();
+        } while (ids.hasNext());
+    }
+
+    /**
+     * Must only be called for creates/updates of the partner itself - never for
+     * BusinessPartnerIdentity changes, which originate from TMS and would be echoed back.
+     */
+    private void publishEventFor(UUID businessPartnerId) {
+        domainEventPublisher.publishTiBusinessPartnerUpdatedEvent(
+            TiBusinessPartnerUpdatedEventBuilder.create().businessPartnerId(businessPartnerId).build()
         );
     }
 

@@ -5,6 +5,10 @@ import static ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData.busine
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.WithJeapAuthenticationToken;
@@ -17,11 +21,13 @@ import ch.admin.bj.swiyu.core.business.modules.identifier.service.IdentifierEntr
 import ch.admin.bj.swiyu.core.business.modules.management.api.CreatePartnerDto;
 import ch.admin.bj.swiyu.core.business.modules.management.api.UpdateBusinessEntityDto;
 import ch.admin.bj.swiyu.core.business.modules.status.service.StatusListEntryService;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.publisher.DomainEventPublisher;
 import ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData;
 import ch.admin.bj.swiyu.core.business.test.DataJpaTestConfiguration;
 import ch.admin.bj.swiyu.core.business.test.DataJpaTestKafkaConfiguration;
 import ch.admin.bj.swiyu.core.business.test.TestRepositories;
 import ch.admin.bj.swiyu.core.business.test.container.WithAllTestContainerInitializers;
+import ch.admin.bj.swiyu.messagetype.ti.TiBusinessPartnerUpdatedEvent;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -51,6 +57,9 @@ class BusinessPartnerServiceIT {
 
     @MockitoBean
     StatusListEntryService statusListEntryService;
+
+    @MockitoBean
+    DomainEventPublisher domainEventPublisher;
 
     @Autowired
     TestRepositories repos;
@@ -114,6 +123,9 @@ class BusinessPartnerServiceIT {
         // THEN
         assertThat(businessEntity).isNotNull();
         assertThat(businessEntity.id()).isNotNull();
+        verify(domainEventPublisher).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(businessEntity.id()))
+        );
     }
 
     @Test
@@ -159,6 +171,11 @@ class BusinessPartnerServiceIT {
 
         var updatedEntity = repos.businessPartner.findById(oldBusinessEntity.id()).orElseThrow();
         assertThat(LocalizedMapUtil.getDefaultValue(updatedEntity.getEntityName())).isEqualTo("example name");
+
+        // one change notification for the create, one for the update
+        verify(domainEventPublisher, times(2)).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(oldBusinessEntity.id()))
+        );
     }
 
     @SuppressWarnings("java:S1874") // remove with EID-6624
@@ -195,6 +212,9 @@ class BusinessPartnerServiceIT {
         assertThat(updatedEntity.getContactPhone()).isEqualTo(newPhone);
         assertThat(updatedEntity.getAddress().getStreet()).isEqualTo(newAddress.getStreet());
         assertThat(updatedEntity.getType()).isEqualTo(newType);
+        verify(domainEventPublisher).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(businessEntity.getId()))
+        );
     }
 
     @Test
@@ -294,6 +314,78 @@ class BusinessPartnerServiceIT {
 
         // THEN
         assertThat(deactivated).isFalse();
+    }
+
+    @Test
+    void publishBusinessPartnerUpdatedEvent_publishesTheChangeNotification() {
+        // GIVEN
+        var partner = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
+        repos.commit();
+
+        // WHEN - twice: idempotent, may be called repeatedly
+        businessPartnerService.publishBusinessPartnerUpdatedEvent(partner.getId());
+        businessPartnerService.publishBusinessPartnerUpdatedEvent(partner.getId());
+
+        // THEN - two notifications, no state change (no version bump)
+        verify(domainEventPublisher, times(2)).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(partner.getId()))
+        );
+        var reloaded = repos.businessPartner.findById(partner.getId()).orElseThrow();
+        assertThat(reloaded.getVersion()).isEqualTo(partner.getVersion());
+    }
+
+    @Test
+    void publishBusinessPartnerUpdatedEvent_unknownPartner_throwsAndPublishesNothing() {
+        // GIVEN / WHEN / THEN
+        var unknownId = UUID.randomUUID();
+        assertThatThrownBy(() -> businessPartnerService.publishBusinessPartnerUpdatedEvent(unknownId)).isInstanceOf(
+            ResourceNotFoundException.class
+        );
+        verify(domainEventPublisher, never()).publishTiBusinessPartnerUpdatedEvent(
+            org.mockito.ArgumentMatchers.any(TiBusinessPartnerUpdatedEvent.class)
+        );
+    }
+
+    @Test
+    void publishAllBusinessPartnerUpdatedEvents_publishesOneEventPerPartner() {
+        // GIVEN
+        var partnerA = repos.businessPartner.save(businessPartnerOfTypeBusiness(UUID.randomUUID()));
+        var partnerB = repos.businessPartner.save(businessPartnerOfTypeGov(UUID.randomUUID()));
+        repos.commit();
+
+        // WHEN
+        businessPartnerService.publishAllBusinessPartnerUpdatedEvents();
+
+        // THEN
+        verify(domainEventPublisher).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(partnerA.getId()))
+        );
+        verify(domainEventPublisher).publishTiBusinessPartnerUpdatedEvent(
+            argThat(event -> event.getPayload().getBusinessPartnerId().equals(partnerB.getId()))
+        );
+    }
+
+    /**
+     * BPI changes come from TMS via the TiBusinessPartnerIdentity* events - publishing the sync
+     * event for them would echo them back (TMS -> CBS -> TMS).
+     */
+    @Test
+    void applyingOrDeactivatingBusinessPartnerIdentity_publishesNoBusinessPartnerUpdatedEvent() {
+        // GIVEN
+        var partner = repos.businessPartner.save(businessPartnerOfTypeGov(UUID.randomUUID()));
+        repos.commit();
+
+        // WHEN
+        businessPartnerService.applyBusinessPartnerIdentity(
+            partner.getId(),
+            BusinessEntityTestData.activeBusinessPartnerIdentity()
+        );
+        businessPartnerService.deactivateBusinessPartnerIdentity(partner.getId(), 2L);
+
+        // THEN
+        verify(domainEventPublisher, never()).publishTiBusinessPartnerUpdatedEvent(
+            org.mockito.ArgumentMatchers.any(TiBusinessPartnerUpdatedEvent.class)
+        );
     }
 
     private static String lookupPamsAdminUserUid() {

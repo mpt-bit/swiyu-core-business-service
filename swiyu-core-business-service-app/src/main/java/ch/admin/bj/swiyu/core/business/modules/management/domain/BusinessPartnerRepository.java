@@ -16,6 +16,13 @@ public interface BusinessPartnerRepository extends JpaRepository<BusinessEntity,
     Page<BusinessEntity> findAllByIdIn(List<UUID> ids, Pageable pageable);
 
     /**
+     * All partner ids, paged and stably ordered - for whole-base scans that only need the id,
+     * without pulling every entity into the Hibernate first-level cache (EID-6988 sync-all).
+     */
+    @Query("SELECT b.id FROM BusinessEntity b ORDER BY b.id")
+    Page<UUID> findAllIds(Pageable pageable);
+
+    /**
      * Partners whose active Trust Identity expires inside the given window, ordered so that paging is
      * stable while the job walks the pages.
      *

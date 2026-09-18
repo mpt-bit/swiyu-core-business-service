@@ -4,6 +4,7 @@ import static net.logstash.logback.argument.StructuredArguments.kv;
 
 import ch.admin.bit.jeap.messaging.avro.AvroMessage;
 import ch.admin.bit.jeap.messaging.transactionaloutbox.outbox.TransactionalOutbox;
+import ch.admin.bj.swiyu.messagetype.ti.TiBusinessPartnerUpdatedEvent;
 import ch.admin.bj.swiyu.messagetype.ti.TiProtectedVerificationSubmissionAcceptedEvent;
 import ch.admin.bj.swiyu.messagetype.ti.TiTrustAddDidSubmissionSubmittedEvent;
 import ch.admin.bj.swiyu.messagetype.ti.TiTrustOnboardingSubmissionAcceptedEvent;
@@ -97,6 +98,20 @@ public class DomainEventPublisher {
                 .setNamespace(TiProtectedVerificationSubmissionAcceptedEvent.TypeRef.SYSTEM_NAME)
                 .setName(topicName)
                 .setId(event.getPayload().getProtectedVerificationSubmissionId().toString())
+                .build(),
+            event
+        );
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void publishTiBusinessPartnerUpdatedEvent(@NonNull TiBusinessPartnerUpdatedEvent event) {
+        var topicName = TiBusinessPartnerUpdatedEvent.TypeRef.DEFAULT_TOPIC;
+        sendEvent(
+            topicName,
+            BeanReferenceMessageKey.newBuilder()
+                .setNamespace(TiBusinessPartnerUpdatedEvent.TypeRef.SYSTEM_NAME)
+                .setName(topicName)
+                .setId(event.getPayload().getBusinessPartnerId().toString())
                 .build(),
             event
         );

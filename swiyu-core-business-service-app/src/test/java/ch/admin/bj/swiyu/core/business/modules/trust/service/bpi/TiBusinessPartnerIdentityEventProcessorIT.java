@@ -15,6 +15,7 @@ import ch.admin.bj.swiyu.core.business.common.audit.AuditPublisher;
 import ch.admin.bj.swiyu.core.business.common.email.EmailCommandPublisher;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.BusinessPartnerIdentityStatus;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.pams.PamsClient;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.publisher.DomainEventPublisher;
 import ch.admin.bj.swiyu.core.business.test.TestRepositories;
 import ch.admin.bj.swiyu.core.business.test.container.WithAllTestContainerInitializers;
 import ch.admin.bj.swiyu.messagetype.ti.BusinessPartnerIdentityDeactivatedPayload;
@@ -49,6 +50,9 @@ class TiBusinessPartnerIdentityEventProcessorIT {
     @MockitoBean
     PamsClient pamsClient;
 
+    @MockitoBean
+    DomainEventPublisher domainEventPublisher;
+
     @Autowired
     TiBusinessPartnerIdentityEventProcessor processor;
 
@@ -68,6 +72,8 @@ class TiBusinessPartnerIdentityEventProcessorIT {
 
         assertThat(identityStatusOf(partnerId)).isEqualTo(BusinessPartnerIdentityStatus.DEACTIVATED);
         verify(emailCommandPublisher).trustIdentityExpired(partnerId);
+        // BPI changes originate from TMS - publishing the sync event here would echo them back
+        verifyNoInteractions(domainEventPublisher);
     }
 
     @Test

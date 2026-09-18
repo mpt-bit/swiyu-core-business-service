@@ -9,6 +9,10 @@ import lombok.NoArgsConstructor;
 public class BusinessPartnerTypeMapper {
 
     public static BusinessPartnerType toBusinessPartnerType(BusinessPartnerTypeDto businessPartnerTypeDto) {
+        if (businessPartnerTypeDto == null) {
+            return BusinessPartnerType.BUSINESS;
+        }
+
         return switch (businessPartnerTypeDto) {
             case GOVERNMENTAL_INSTITUTION -> BusinessPartnerType.GOVERNMENTAL_INSTITUTION;
             case BUSINESS -> BusinessPartnerType.BUSINESS;

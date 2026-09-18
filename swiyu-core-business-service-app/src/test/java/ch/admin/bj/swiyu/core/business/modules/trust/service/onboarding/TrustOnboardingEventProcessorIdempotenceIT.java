@@ -16,6 +16,7 @@ import ch.admin.bj.swiyu.core.business.common.audit.AuditPublisher;
 import ch.admin.bj.swiyu.core.business.common.email.EmailCommandPublisher;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.pams.PamsClient;
 import ch.admin.bj.swiyu.core.business.modules.trust.domain.onboarding.TrustOnboardingSubmissionStatus;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.publisher.DomainEventPublisher;
 import ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData;
 import ch.admin.bj.swiyu.core.business.test.TestRepositories;
 import ch.admin.bj.swiyu.core.business.test.container.WithAllTestContainerInitializers;
@@ -54,6 +55,9 @@ class TrustOnboardingEventProcessorIdempotenceIT {
 
     @MockitoBean
     PamsClient pamsClient;
+
+    @MockitoBean
+    DomainEventPublisher domainEventPublisher;
 
     @Autowired
     TrustOnboardingEventProcessor processor;

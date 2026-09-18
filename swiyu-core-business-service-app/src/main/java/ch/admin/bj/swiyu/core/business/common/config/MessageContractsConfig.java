@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Configuration;
     encryptionKeyId = "messagingKey"
 )
 @JeapMessageProducerContract(value = TiVqpsSubmissionAcceptedEvent.TypeRef.class, encryptionKeyId = "messagingKey")
+@JeapMessageProducerContract(value = TiBusinessPartnerUpdatedEvent.TypeRef.class, encryptionKeyId = "messagingKey")
 @JeapMessageProducerContract(
     value = TiProtectedVerificationSubmissionAcceptedEvent.TypeRef.class,
     encryptionKeyId = "messagingKey"

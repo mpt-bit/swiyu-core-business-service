@@ -18,6 +18,7 @@ import ch.admin.bj.swiyu.core.business.modules.management.api.BusinessPartnerDto
 import ch.admin.bj.swiyu.core.business.modules.management.api.CreatePartnerDto;
 import ch.admin.bj.swiyu.core.business.modules.management.domain.pams.PamsClient;
 import ch.admin.bj.swiyu.core.business.modules.status.service.StatusListEntryService;
+import ch.admin.bj.swiyu.core.business.modules.trust.domain.publisher.DomainEventPublisher;
 import ch.admin.bj.swiyu.core.business.test.BusinessEntityTestData;
 import ch.admin.bj.swiyu.core.business.test.RestResponsePage;
 import ch.admin.bj.swiyu.core.business.test.TestRepositories;
@@ -62,6 +63,9 @@ class BusinessPartnerInternalV2ControllerIT {
 
     @MockitoBean
     PamsClient pamsClient;
+
+    @MockitoBean
+    DomainEventPublisher domainEventPublisher;
 
     @MockitoBean
     IdentifierEntryService identifierEntryService;
