@@ -5,54 +5,10 @@ on:
     tags:
       - '*'
 
-permissions:
-  contents: write
-
 jobs:
   release-sbom:
-    name: Generate and publish release with SBOM
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
-        with:
-          persist-credentials: false
-
-      - name: Set up Java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961  # v5
-        with:
-          distribution: 'temurin'
-          java-version: '25'
-          cache: 'maven'
-
-      - name: Install Snyk CLI
-        uses: snyk/actions/setup@12140f4059e244892ae643824a95459a102120dd
-
-      - name: Create SBOM
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          SNYK_API: https://api.eu.snyk.io
-          SNYK_ORG: ${{ secrets.SNYK_ORG }}
-        run: |
-          snyk sbom --format=cyclonedx1.6+json \
-                    --maven-aggregate-project \
-                    --maven-skip-wrapper \
-                    --json-file-output=sbom.cdx.json
-
-      - name: Upload SBOM to release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          # Reuse existing release, otherwise create one and attach the SBOM
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              sbom.cdx.json --clobber
-          else
-            gh release create "$TAG" \
-              sbom.cdx.json \
-              --verify-tag \
-              --title "$TAG" \
-              --notes "Source code and SBOM"
-          fi
+    uses: "swiyu-admin-ch/github-actions-workflows/.github/workflows/maven-generate-release-sbom.yml@feat/maven-sbom-release-workflow"
+    permissions:
+      contents: write
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
