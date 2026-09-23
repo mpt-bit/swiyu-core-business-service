@@ -3,9 +3,11 @@ package ch.admin.bj.swiyu.core.business.common.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +38,19 @@ public class OpenApiConfig {
             );
     }
 
+    // Prevents springdoc from introspecting the actual Jackson JsonNode class (which would render
+    // all its properties like isObject, isArray, nodeType, ...) by overriding the JsonNode component
+    // schema. Note: global OpenApiCustomizer beans are NOT applied to GroupedOpenApi groups, so this
+    // customizer must also be registered on every group via addOpenApiCustomizer(...).
+    @Bean
+    public OpenApiCustomizer jsonNodeSchemaCustomizer() {
+        return openApi ->
+            openApi.schema(
+                "JsonNode",
+                new Schema<>().type("object").description("An arbitrary valid JSON value (object, array, or primitive)")
+            );
+    }
+
     @Bean
     public GroupedOpenApi internal() {
         return GroupedOpenApi.builder()
@@ -50,6 +65,7 @@ public class OpenApiConfig {
                         .version(buildProperties.getVersion())
                 )
             )
+            .addOpenApiCustomizer(jsonNodeSchemaCustomizer())
             .build();
     }
 
@@ -67,6 +83,7 @@ public class OpenApiConfig {
                         .version(buildProperties.getVersion())
                 )
             )
+            .addOpenApiCustomizer(jsonNodeSchemaCustomizer())
             .build();
     }
 
@@ -84,6 +101,7 @@ public class OpenApiConfig {
                         .version(buildProperties.getVersion())
                 )
             )
+            .addOpenApiCustomizer(jsonNodeSchemaCustomizer())
             .build();
     }
 
@@ -101,6 +119,7 @@ public class OpenApiConfig {
                         .version(buildProperties.getVersion())
                 )
             )
+            .addOpenApiCustomizer(jsonNodeSchemaCustomizer())
             .build();
     }
 }
